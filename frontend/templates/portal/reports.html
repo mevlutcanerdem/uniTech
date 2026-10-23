@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Raporlar" %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% t "Raporlar" %}</h1>
+    <p>{% t "Bina ve türe göre dağılım, çözüm süreleri ve ekibin iş yükü." %}</p>
+  </div>
+  <nav class="tabs compact" aria-label="{% t 'Raporlar' %}">
+    <a href="?days=14" {% if days == 14 %}aria-current="page"{% endif %}>{% t "Son {n} gün" n=14 %}</a>
+    <a href="?days=30" {% if days == 30 %}aria-current="page"{% endif %}>{% t "Son {n} gün" n=30 %}</a>
+  </nav>
+</div>
+
+<div class="stats five">
+  <div class="stat"><span class="tile cc-tesisat">{% icon "inbox" 22 %}</span><div><b>{{ r.total }}</b><span>{% t "Toplam arıza" %}</span></div></div>
+  <div class="stat"><span class="tile t-work">{% icon "clock" 22 %}</span><div><b>{{ open_count }}</b><span>{% t "Açık arıza" %}</span></div></div>
+  <div class="stat"><span class="tile t-done">{% icon "check" 22 %}</span><div><b class="sm">{{ avg|default:"—" }}</b><span>{% t "Ortalama çözüm süresi" %}</span></div></div>
+  <div class="stat"><span class="tile t-urgent">{% icon "alert" 22 %}</span><div><b>{{ r.open_over_48h }}</b><span>{% t "48 saatten uzun açık" %}</span></div></div>
+  <div class="stat"><span class="tile cc-diger">{% icon "user" 22 %}</span><div><b>{{ r.unassigned }}</b><span>{% t "Atanmamış" %}</span></div></div>
+</div>
+
+{% if not r.total %}
+<div class="empty"><span class="tile cc-bilgisayar">{% icon "chart" 26 %}</span><strong>{% t "Henüz veri yok" %}</strong><span>{% t "Arızalar bildirildikçe burada grafikler oluşacak." %}</span></div>
+{% else %}
+<section class="card">
+  <div class="card-head">
+    <h2>{% t "Günlük arızalar" %}</h2>
+    <div class="legend"><span><i class="sw created"></i>{% t "Bildirilen" %}</span><span><i class="sw resolved"></i>{% t "Çözülen" %}</span></div>
+  </div>
+  <div class="colchart" style="--n: {{ daily|length }}">
+    <div class="y-axis"><span>{{ peak }}</span><span>0</span></div>
+    <div class="cols">
+      {% for d in daily %}
+      <div class="col" title="{{ d.date }} · {% t 'Bildirilen' %}: {{ d.created }} · {% t 'Çözülen' %}: {{ d.resolved }}">
+        <div class="bars"><span class="bar created" style="height: {{ d.h_created }}%"></span><span class="bar resolved" style="height: {{ d.h_resolved }}%"></span></div>
+        <span class="x">{{ d.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h2>{% t "Türe göre dağılım" %}</h2>
+    <ul class="hbars">
+      {% for c in r.by_category %}
+      <li class="cc-{{ c.key }}">
+        <span class="tile sm cc-{{ c.key }}">{% icon c.key 16 %}</span>
+        <span class="lbl">{{ c.key|category_label:LANG }}</span>
+        <span class="track"><span class="fill" style="width: {{ c.count|pct:max_cat }}%"></span></span>
+        <b>{{ c.count }}</b>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <h2>{% t "Binaya göre dağılım" %}</h2>
+    <ul class="hbars">
+      {% for c in r.by_building %}
+      <li class="cc-tesisat">
+        <span class="tile sm cc-tesisat">{% icon "pin" 16 %}</span>
+        <span class="lbl">{{ c.key|building_label:LANG }}</span>
+        <span class="track"><span class="fill" style="width: {{ c.count|pct:max_bld }}%"></span></span>
+        <b>{{ c.count }}</b>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+{% if r.staff %}
+<section class="card flush">
+  <h2 class="pad">{% t "Ekip performansı" %}</h2>
+  <div class="table-wrap plain">
+    <table>
+      <thead><tr><th>{% t "Kişi" %}</th><th class="num">{% t "Açık" %}</th><th class="num">{% t "Çözülen" %}</th></tr></thead>
+      <tbody>
+        {% for s in r.staff %}
+        <tr><td><span class="person"><span class="avatar">{{ s.name|initials }}</span>{{ s.name }}</span></td><td class="num">{{ s.open }}</td><td class="num">{{ s.resolved }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

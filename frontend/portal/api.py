@@ -4,6 +4,8 @@ from datetime import datetime
 import requests
 from django.conf import settings
 
+from .i18n import tr, translate_api_error
+
 TIMEOUT = 10
 
 
@@ -35,27 +37,33 @@ def _parse_dates(obj):
     return obj
 
 
+def _sentence(msg):
+    msg = msg.strip()
+    return msg[:1].upper() + msg[1:] + ("" if msg.endswith(".") else ".")
+
+
 def call(request, method, path, json=None, params=None, auth=True):
-    headers = {}
+    lang = getattr(request, "LANG", "tr")
+    headers = {"Accept-Language": lang}
     if auth:
         token = request.session.get("token")
         if not token:
-            raise NeedLogin(401, "Devam etmek için giriş yap.")
+            raise NeedLogin(401, tr(lang, "Devam etmek için giriş yap."))
         headers["Authorization"] = f"Bearer {token}"
     try:
         res = requests.request(
             method, settings.API_URL + path, json=json, params=params, headers=headers, timeout=TIMEOUT
         )
     except requests.RequestException:
-        raise ApiError(503, "Sunucuya ulaşılamıyor. Biraz sonra tekrar dene.")
+        raise ApiError(503, tr(lang, "Sunucuya ulaşılamıyor. Biraz sonra tekrar dene."))
     try:
         data = res.json()
     except ValueError:
         data = {}
+    err = data.get("error") if isinstance(data, dict) else None
     if res.status_code == 401 and auth:
         request.session.flush()
-        raise NeedLogin(401, data.get("error", "Oturumun kapandı, tekrar giriş yap."))
+        raise NeedLogin(401, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Oturumun kapandı, tekrar giriş yap."))
     if res.status_code >= 400:
-        msg = data.get("error", "Bir hata oluştu.") if isinstance(data, dict) else "Bir hata oluştu."
-        raise ApiError(res.status_code, msg[:1].upper() + msg[1:] + ("" if msg.endswith(".") else "."))
+        raise ApiError(res.status_code, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Bir hata oluştu."))
     return _parse_dates(data)

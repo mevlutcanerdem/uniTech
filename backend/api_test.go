@@ -107,12 +107,12 @@ func TestTicketFlow(t *testing.T) {
 		t.Fatalf("rol değiştirme: %d", c)
 	}
 	var up Ticket
-	if c := call(t, srv, "PATCH", path, other.Token, map[string]string{"status": "islemde", "note": "Yoldayız"}, &up); c != 200 || up.Status != StatusProgress || len(up.History) != 2 {
+	if c := call(t, srv, "PATCH", path, other.Token, map[string]string{"status": "islemde", "note": "Yoldayız"}, &up); c != 200 || up.Status != StatusProgress || len(up.History) != 3 || up.AssigneeID != other.User.ID {
 		t.Fatalf("ekip güncellemesi: %d %+v", c, up)
 	}
 	var mine Ticket
 	call(t, srv, "GET", path, stu.Token, nil, &mine)
-	if mine.Status != StatusProgress || mine.History[1].Note != "Yoldayız" {
+	if mine.Status != StatusProgress || mine.History[2].Note != "Yoldayız" {
 		t.Errorf("öğrenci güncel durumu görmedi: %+v", mine)
 	}
 	var st Stats
@@ -150,5 +150,56 @@ func TestTicketsAreAnonymous(t *testing.T) {
 	call(t, srv, "GET", "/api/tickets", adm.Token, nil, &list)
 	if len(list) != 1 || list[0].ReporterName != "T*** K***" || list[0].ReporterEmail != "m***.e***@agu.edu.tr" || list[0].History[0].ByName != "T*** K***" {
 		t.Fatalf("ekip tam adı gördü: %+v", list)
+	}
+}
+
+func TestAssignAndReport(t *testing.T) {
+	srv := newTestApp(t)
+	stu := register(t, srv, "ogr@agu.edu.tr")
+	adm := register(t, srv, "admin@agu.edu.tr")
+	mk := func(cat, bld string) Ticket {
+		var tk Ticket
+		call(t, srv, "POST", "/api/tickets", stu.Token, map[string]string{
+			"category": cat, "building": bld, "room": "", "title": "T", "description": "D", "priority": "orta"}, &tk)
+		return tk
+	}
+	a, b := mk("elektrik", "Ambar"), mk("elektrik", "Kütüphane")
+	mk("internet", "Ambar")
+
+	var up Ticket
+	if c := call(t, srv, "PATCH", "/api/tickets/"+itoa(a.ID), adm.Token, map[string]string{"assign": "me"}, &up); c != 200 || up.AssigneeID != adm.User.ID {
+		t.Fatalf("üzerine alma: %d %+v", c, up)
+	}
+	var mine []Ticket
+	call(t, srv, "GET", "/api/tickets?assignee=me", adm.Token, nil, &mine)
+	if len(mine) != 1 || mine[0].ID != a.ID {
+		t.Fatalf("bana atananlar: %+v", mine)
+	}
+	var free []Ticket
+	call(t, srv, "GET", "/api/tickets?assignee=none", adm.Token, nil, &free)
+	if len(free) != 2 {
+		t.Fatalf("atanmamışlar: %d", len(free))
+	}
+	call(t, srv, "PATCH", "/api/tickets/"+itoa(a.ID), adm.Token, map[string]string{"status": "cozuldu"}, &up)
+	if up.ResolvedAt == nil {
+		t.Fatal("çözüm zamanı yazılmadı")
+	}
+	call(t, srv, "PATCH", "/api/tickets/"+itoa(b.ID), adm.Token, map[string]string{"assign": "none"}, nil)
+
+	var rep Report
+	if c := call(t, srv, "GET", "/api/reports", adm.Token, nil, &rep); c != 200 {
+		t.Fatalf("rapor: %d", c)
+	}
+	if rep.Total != 3 || rep.Totals.Done != 1 || rep.Unassigned != 2 || rep.ByCategory[0].Key != "elektrik" || rep.ByBuilding[0].Key != "Ambar" || len(rep.Daily) != 14 {
+		t.Fatalf("rapor içeriği: %+v", rep)
+	}
+	if rep.Daily[13].Created != 3 || rep.Daily[13].Resolved != 1 {
+		t.Fatalf("günlük sayım: %+v", rep.Daily[13])
+	}
+	if len(rep.Staff) != 1 || rep.Staff[0].Resolved != 1 {
+		t.Fatalf("ekip istatistiği: %+v", rep.Staff)
+	}
+	if c := call(t, srv, "GET", "/api/reports", stu.Token, nil, nil); c != 403 {
+		t.Errorf("öğrenci raporu gördü: %d", c)
 	}
 }

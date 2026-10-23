@@ -1,27 +1,31 @@
 {% extends "base.html" %}
-{% load static portal_icons %}
-{% block title %}Teknik ekip paneli{% endblock %}
+{% load static portal_icons portal_tags %}
+{% block title %}{% t "Teknik ekip paneli" %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Gelen arızalar</h1>
-    <p>Acil olanlar en üstte. Yeni bildirimler sayfa yenilenmeden buraya düşer.</p>
+    <h1>{% t "Gelen arızalar" %}</h1>
+    <p>{% t "Acil olanlar en üstte. Yeni bildirimler sayfa yenilenmeden buraya düşer." %}</p>
   </div>
-  <span class="live" id="live">Bağlanıyor…</span>
+  <span class="live" id="live">{% t "Bağlanıyor…" %}</span>
 </div>
+<nav class="tabs" aria-label="{% t 'Sorumlu' %}">
+  {% for key, label, url in tabs %}<a href="{{ url }}" {% if filters.assignee == key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
 <form class="toolbar" method="get" id="filters">
-  <select name="status" aria-label="Duruma göre" onchange="this.form.submit()">
-    <option value="acik" {% if filters.status == 'acik' %}selected{% endif %}>Açık olanlar</option>
-    {% for key, label in statuses.items %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    <option value="hepsi" {% if filters.status == 'hepsi' %}selected{% endif %}>Hepsi</option>
+  {% if filters.assignee %}<input type="hidden" name="assignee" value="{{ filters.assignee }}">{% endif %}
+  <select name="status" aria-label="{% t 'Duruma göre' %}" onchange="this.form.submit()">
+    <option value="acik" {% if filters.status == 'acik' %}selected{% endif %}>{% t "Açık olanlar" %}</option>
+    {% for key, label in statuses.items %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ key|status_label:LANG }}</option>{% endfor %}
+    <option value="hepsi" {% if filters.status == 'hepsi' %}selected{% endif %}>{% t "Hepsi" %}</option>
   </select>
-  <select name="category" aria-label="Türe göre" onchange="this.form.submit()">
-    <option value="">Tüm türler</option>
-    {% for key, label in categories.items %}<option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  <select name="category" aria-label="{% t 'Türe göre' %}" onchange="this.form.submit()">
+    <option value="">{% t "Tüm türler" %}</option>
+    {% for key, label in categories.items %}<option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ key|category_label:LANG }}</option>{% endfor %}
   </select>
-  <span class="field-icon search">{% icon "search" 18 %}<input type="search" name="q" value="{{ filters.q }}" placeholder="Bina, oda veya takip no ara" aria-label="Ara"></span>
+  <span class="field-icon search">{% icon "search" 18 %}<input type="search" name="q" value="{{ filters.q }}" placeholder="{% t 'Bina, oda veya takip no ara' %}" aria-label="{% t 'Ara' %}"></span>
 </form>
-<div id="panel-body" style="display:flex;flex-direction:column;gap:18px">
+<div id="panel-body" class="panel-body">
   {% include "portal/_panel_body.html" %}
 </div>
 <div class="toast" id="toast" role="status" hidden>{% icon "bell" 18 %}<span id="toast-text"></span></div>
@@ -30,7 +34,14 @@
 <script>
   window.UNITECH = {
     streamUrl: "{{ API_PUBLIC_URL|escapejs }}/api/events?token={{ stream_token|urlencode|escapejs }}",
-    listUrl: "{% url 'panel_list' %}"
+    listUrl: "{% url 'panel_list' %}",
+    text: {
+      live: "{% t 'Canlı' %}",
+      reconnecting: "{% t 'Yeniden bağlanıyor…' %}",
+      unsupported: "{% t 'Canlı güncelleme desteklenmiyor' %}",
+      newIssue: "{% t 'Yeni arıza' %}",
+      urgent: "{% t 'ACİL' %}"
+    }
   };
 </script>
 <script src="{% static 'js/panel.js' %}"></script>

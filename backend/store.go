@@ -66,6 +66,8 @@ type HistoryEntry struct {
 	ByName string    `json:"by_name"`
 	Status string    `json:"status,omitempty"`
 	Note   string    `json:"note,omitempty"`
+	// Action sistem olayları için: "created", "assigned", "unassigned".
+	Action string `json:"action,omitempty"`
 }
 
 type Ticket struct {
@@ -81,8 +83,11 @@ type Ticket struct {
 	ReporterID    int            `json:"reporter_id"`
 	ReporterName  string         `json:"reporter_name"`
 	ReporterEmail string         `json:"reporter_email"`
+	AssigneeID    int            `json:"assignee_id,omitempty"`
+	AssigneeName  string         `json:"assignee_name,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
+	ResolvedAt    *time.Time     `json:"resolved_at,omitempty"`
 	History       []HistoryEntry `json:"history"`
 }
 
@@ -196,7 +201,7 @@ func (s *Store) CreateTicket(t Ticket) (Ticket, error) {
 	t.Code = ticketCode(now.Year(), t.ID)
 	t.Status = StatusNew
 	t.CreatedAt, t.UpdatedAt = now, now
-	t.History = []HistoryEntry{{At: now, ByID: t.ReporterID, ByName: t.ReporterName, Status: StatusNew, Note: "Arıza bildirildi"}}
+	t.History = []HistoryEntry{{At: now, ByID: t.ReporterID, ByName: t.ReporterName, Status: StatusNew, Action: "created"}}
 	s.d.Tickets = append(s.d.Tickets, t)
 	return t, s.saveLocked()
 }
@@ -217,6 +222,8 @@ type TicketFilter struct {
 	Status     string // "", "acik" veya durum kodu
 	Category   string
 	Query      string
+	AssigneeID int  // 0 = hepsi
+	Unassigned bool // sadece kimsenin üstlenmedikleri
 }
 
 var priorityRank = map[string]int{"acil": 0, "orta": 1, "dusuk": 2}
@@ -244,6 +251,12 @@ func (s *Store) ListTickets(f TicketFilter) []Ticket {
 		if f.Category != "" && t.Category != f.Category {
 			continue
 		}
+		if f.AssigneeID != 0 && t.AssigneeID != f.AssigneeID {
+			continue
+		}
+		if f.Unassigned && t.AssigneeID != 0 {
+			continue
+		}
 		if q != "" && !strings.Contains(strings.ToLower(t.Title+" "+t.Description+" "+t.Building+" "+t.Room+" "+t.Code), q) {
 			continue
 		}
@@ -263,7 +276,8 @@ func (s *Store) ListTickets(f TicketFilter) []Ticket {
 	return out
 }
 
-func (s *Store) UpdateTicket(id int, by User, status, note string) (Ticket, error) {
+// UpdateTicket durumu, notu ve atamayı günceller. assign: "" (değiştirme), "me" veya "none".
+func (s *Store) UpdateTicket(id int, by User, status, note, assign string) (Ticket, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.d.Tickets {
@@ -272,16 +286,43 @@ func (s *Store) UpdateTicket(id int, by User, status, note string) (Ticket, erro
 			continue
 		}
 		now := time.Now().UTC()
-		h := HistoryEntry{At: now, ByID: by.ID, ByName: by.Name, Note: note}
+		var add []HistoryEntry
+		entry := func(e HistoryEntry) { e.At, e.ByID, e.ByName = now, by.ID, by.Name; add = append(add, e) }
+
+		// İşleme alınan ve kimsede olmayan arıza otomatik olarak işlemi yapana atanır.
+		if status == StatusProgress && t.AssigneeID == 0 && assign == "" {
+			assign = "me"
+		}
+		switch assign {
+		case "me":
+			if t.AssigneeID != by.ID {
+				t.AssigneeID, t.AssigneeName = by.ID, by.Name
+				entry(HistoryEntry{Action: "assigned"})
+			}
+		case "none":
+			if t.AssigneeID != 0 {
+				t.AssigneeID, t.AssigneeName = 0, ""
+				entry(HistoryEntry{Action: "unassigned"})
+			}
+		}
 		if status != "" && status != t.Status {
 			t.Status = status
-			h.Status = status
+			if status == StatusDone {
+				t.ResolvedAt = &now
+			} else {
+				t.ResolvedAt = nil
+			}
+			entry(HistoryEntry{Status: status, Note: note})
+			note = ""
 		}
-		if h.Status == "" && h.Note == "" {
+		if note != "" {
+			entry(HistoryEntry{Note: note})
+		}
+		if len(add) == 0 {
 			return *t, nil
 		}
 		t.UpdatedAt = now
-		t.History = append(t.History, h)
+		t.History = append(t.History, add...)
 		return *t, s.saveLocked()
 	}
 	return Ticket{}, ErrNotFound

@@ -36,15 +36,16 @@
     finally { busy = false; }
   }
 
-  if (!("EventSource" in window)) { live.textContent = "Canlı güncelleme desteklenmiyor"; return; }
+  const T = cfg.text || {};
+  if (!("EventSource" in window)) { live.textContent = T.unsupported; return; }
   const es = new EventSource(cfg.streamUrl);
-  es.onopen = () => { live.textContent = "Canlı"; live.classList.add("on"); };
-  es.onerror = () => { live.textContent = "Yeniden bağlanıyor…"; live.classList.remove("on"); };
+  es.onopen = () => { live.textContent = T.live; live.classList.add("on"); };
+  es.onerror = () => { live.textContent = T.reconnecting; live.classList.remove("on"); };
   es.addEventListener("ticket", (ev) => {
     let d = {};
     try { d = JSON.parse(ev.data); } catch (e) {}
     if (d.type === "created") {
-      showToast((d.priority === "acil" ? "ACİL · " : "") + "Yeni arıza: " + (d.title || d.code));
+      showToast((d.priority === "acil" ? T.urgent + " · " : "") + T.newIssue + ": " + (d.title || d.code));
     }
     refresh(d.ticket_id);
   });

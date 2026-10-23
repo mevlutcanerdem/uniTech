@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -112,6 +113,7 @@ func (a *App) Routes() http.Handler {
 	m.HandleFunc("GET /api/tickets/{id}", a.auth(a.getTicket))
 	m.HandleFunc("PATCH /api/tickets/{id}", a.staff(a.updateTicket))
 	m.HandleFunc("GET /api/stats", a.staff(a.stats))
+	m.HandleFunc("GET /api/reports", a.staff(a.reports))
 	m.HandleFunc("GET /api/events", a.cors(a.staff(a.hub.ServeSSE)))
 
 	m.HandleFunc("GET /api/users", a.admin(a.listUsers))
@@ -265,6 +267,12 @@ func (a *App) listTickets(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r)
 	q := r.URL.Query()
 	f := TicketFilter{Status: q.Get("status"), Category: q.Get("category"), Query: q.Get("q")}
+	switch q.Get("assignee") {
+	case "me":
+		f.AssigneeID = u.ID
+	case "none":
+		f.Unassigned = true
+	}
 	// Öğrenciler sadece kendi bildirimlerini görür; ekip scope=mine ile kendininkini isteyebilir.
 	if !u.IsStaff() || q.Get("scope") == "mine" {
 		f.ReporterID = u.ID
@@ -300,7 +308,7 @@ func (a *App) updateTicket(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var in struct{ Status, Note string }
+	var in struct{ Status, Note, Assign string }
 	if !readJSON(w, r, &in) {
 		return
 	}
@@ -308,16 +316,20 @@ func (a *App) updateTicket(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "geçersiz durum")
 		return
 	}
+	if in.Assign != "" && in.Assign != "me" && in.Assign != "none" {
+		writeErr(w, 400, "geçersiz atama")
+		return
+	}
 	note, ok := clean(in.Note, 500)
 	if !ok {
 		writeErr(w, 400, "not en fazla 500 karakter olabilir")
 		return
 	}
-	if in.Status == "" && note == "" {
-		writeErr(w, 400, "durum veya not gerekli")
+	if in.Status == "" && note == "" && in.Assign == "" {
+		writeErr(w, 400, "durum, not veya atama gerekli")
 		return
 	}
-	t, err := a.store.UpdateTicket(id, userFrom(r), in.Status, note)
+	t, err := a.store.UpdateTicket(id, userFrom(r), in.Status, note, in.Assign)
 	if errors.Is(err, ErrNotFound) {
 		writeErr(w, 404, "arıza bulunamadı")
 		return
@@ -331,6 +343,14 @@ func (a *App) updateTicket(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, a.store.Stats())
+}
+
+func (a *App) reports(w http.ResponseWriter, r *http.Request) {
+	days, err := strconv.Atoi(r.URL.Query().Get("days"))
+	if err != nil || days < 7 || days > 90 {
+		days = 14
+	}
+	writeJSON(w, 200, a.store.Report(days, time.Now()))
 }
 
 func (a *App) listUsers(w http.ResponseWriter, r *http.Request) {

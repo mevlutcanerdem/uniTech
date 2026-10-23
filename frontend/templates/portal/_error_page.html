@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Bir hata oluştu." %}{% endblock %}
+{% block page_class %}narrow{% endblock %}
+{% block content %}
+<div class="empty"><span class="tile t-urgent">{% icon "alert" 26 %}</span><strong>{{ message }}</strong></div>
+{% endblock %}

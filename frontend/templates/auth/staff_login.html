@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Teknik Ekip Girişi" %}{% endblock %}
+{% block body %}
+<main class="auth">
+  <section class="auth-brand staff">
+    <span class="badge">{% icon "logo" 16 %} {% t "Teknik ekip" %}</span>
+    <h1>{% t "Arızaları tek panelden yönet." %}</h1>
+    <p>{% t "Öğrencilerin bildirdiği arızalar anında burada. Üzerine al, durumunu güncelle, raporları izle." %}</p>
+    <ul class="features">
+      <li><span class="tile">{% icon "bell" 20 %}</span><div><b>{% t "Canlı panel" %}</b><span>{% t "Yeni arızalar sayfa yenilenmeden gelir, acil olanlar en üstte." %}</span></div></li>
+      <li><span class="tile">{% icon "user" 20 %}</span><div><b>{% t "Üzerine al" %}</b><span>{% t "Arızayı üstlen, kimde olduğu herkese görünsün." %}</span></div></li>
+      <li><span class="tile">{% icon "chart" 20 %}</span><div><b>{% t "Raporlar" %}</b><span>{% t "Bina ve türe göre dağılım, ortalama çözüm süresi." %}</span></div></li>
+    </ul>
+  </section>
+  <section class="auth-form">
+    <div class="auth-card">
+      {% include "_messages.html" %}
+      <div>
+        <span class="staff-chip">{% icon "shield" 14 %}{% t "Teknik Ekip Girişi" %}</span>
+        <h2>{% t "Tekrar hoş geldin" %}</h2>
+        <p class="card-sub">{% t "Ekip hesabınla giriş yap." %}</p>
+      </div>
+      <form class="stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <label for="email">{% t "E-posta" %}
+          <span class="field-icon">{% icon "user" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
+        </label>
+        <label for="password">{% t "Şifre" %}
+          <span class="field-icon">{% icon "shield" 18 %}<input id="password" name="password" type="password" autocomplete="current-password" required></span>
+        </label>
+        {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+        <button class="btn primary dark" type="submit">{% t "Giriş yap" %}</button>
+      </form>
+      <p class="center switch">{% t "Öğrenci misin?" %} <a href="{% url 'login' %}">{% t "Öğrenci girişi" %}</a></p>
+    </div>
+  </section>
+</main>
+{% endblock %}

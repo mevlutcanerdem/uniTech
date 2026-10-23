@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 {% load portal_tags portal_icons %}
-{% block title %}Kullanıcılar{% endblock %}
+{% block title %}{% t "Kullanıcılar" %}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Kullanıcılar ve roller</h1>
-    <p>Teknik ekip üyelerine “Teknik ekip” rolünü ver; panele erişip arıza durumlarını güncelleyebilirler.</p>
+    <h1>{% t "Kullanıcılar ve roller" %}</h1>
+    <p>{% t "Teknik ekip üyelerine “Teknik ekip” rolünü ver; panele erişip arıza durumlarını güncelleyebilirler." %}</p>
   </div>
 </div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Kişi</th><th>E-posta</th><th>Kayıt</th><th>Rol</th><th>Değiştir</th></tr></thead>
+    <thead><tr><th>{% t "Kişi" %}</th><th>{% t "E-posta" %}</th><th>{% t "Kayıt" %}</th><th>{% t "Rol" %}</th><th>{% t "Değiştir" %}</th></tr></thead>
     <tbody>
       {% for u in users %}
       <tr>
         <td><span class="person"><span class="avatar">{{ u.name|initials }}</span>{{ u.name }}</span></td>
         <td>{{ u.email }}</td>
         <td>{{ u.created_at|date:"j M Y" }}</td>
-        <td><span class="role role-{{ u.role }}">{{ u.role|role_label }}</span></td>
+        <td><span class="role role-{{ u.role }}">{{ u.role|role_label:LANG }}</span></td>
         <td>
-          {% if u.id == me.id %}<span class="hint">Sen</span>{% else %}
+          {% if u.id == me.id %}<span class="hint">{% t "Sen" %}</span>{% else %}
           <form method="post" action="{% url 'set_role' u.id %}">
             {% csrf_token %}
-            <select name="role" aria-label="{{ u.name }} rolü">
-              {% for key, label in roles.items %}<option value="{{ key }}" {% if u.role == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            <select name="role" aria-label="{{ u.name }} {% t 'Rol' %}">
+              {% for key, label in roles.items %}<option value="{{ key }}" {% if u.role == key %}selected{% endif %}>{{ key|role_label:LANG }}</option>{% endfor %}
             </select>
-            <button class="btn small" type="submit">Kaydet</button>
+            <button class="btn small" type="submit">{% t "Kaydet" %}</button>
           </form>
           {% endif %}
         </td>

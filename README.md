@@ -14,6 +14,11 @@ Abdullah Gül Üniversitesi için arıza bildirim sistemi. Öğrenciler kampüst
 - **Teknik ekip paneli:** Yeni arızalar sayfa yenilenmeden gelir (Server-Sent Events). Acil olanlar en üstte durur. Duruma, türe göre filtre ve arama vardır.
 - **Geçmiş:** Her arızanın kim tarafından ne zaman güncellendiği kayıt altındadır.
 - **Roller:** Öğrenci, Teknik ekip, Yönetici. Yönetici, “Kullanıcılar” sayfasından ekip üyelerine rol verir.
+- **Ayrı ekip girişi:** Teknik ekip `/ekip/giris/` adresinden girer ve kendine özel menüyü görür (Panel, Bana atananlar, Raporlar).
+- **Arızayı üzerine alma:** Teknisyen arızayı üstlenir, kimde olduğu herkese görünür. “İşlemde” yapılan arıza otomatik olarak işlemi yapana atanır.
+- **Raporlar:** Günlük bildirilen/çözülen grafiği, türe ve binaya göre dağılım, ortalama çözüm süresi, ekip performansı.
+- **Gizlilik:** Arızayı bildiren öğrencinin adı ve e-postası her yerde maskelenir (`M*** C*** E***`).
+- **Türkçe / İngilizce:** Üst bardaki TR / EN seçiciyle dil değişir. Yeni metin eklerken `frontend/portal/i18n.py` içine İngilizcesini ekle; `python frontend/check_i18n.py` eksikleri listeler.
 
 ## Mimari
 

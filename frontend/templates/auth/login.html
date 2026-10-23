@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load portal_icons %}
-{% block title %}Giriş{% endblock %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Giriş" %}{% endblock %}
 {% block body %}
 <main class="auth">
   {% include "auth/_brand.html" %}
@@ -8,22 +8,23 @@
     <div class="auth-card">
       {% include "_messages.html" %}
       <div>
-        <h2>Tekrar hoş geldin</h2>
-        <p class="card-sub">Okul e-postanla giriş yap.</p>
+        <h2>{% t "Tekrar hoş geldin" %}</h2>
+        <p class="card-sub">{% t "Okul e-postanla giriş yap." %}</p>
       </div>
       <form class="stack" method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next }}">
-        <label for="email">Okul e-postası
+        <label for="email">{% t "Okul e-postası" %}
           <span class="field-icon">{% icon "user" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
         </label>
-        <label for="password">Şifre
+        <label for="password">{% t "Şifre" %}
           <span class="field-icon">{% icon "shield" 18 %}<input id="password" name="password" type="password" autocomplete="current-password" required></span>
         </label>
         {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
-        <button class="btn primary" type="submit">Giriş yap</button>
+        <button class="btn primary" type="submit">{% t "Giriş yap" %}</button>
       </form>
-      <p class="center">Hesabın yok mu? <a href="{% url 'register' %}">Okul e-postanla kayıt ol</a></p>
+      <p class="center">{% t "Hesabın yok mu?" %} <a href="{% url 'register' %}">{% t "Okul e-postanla kayıt ol" %}</a></p>
+      <p class="center switch">{% t "Teknik ekipten misin?" %} <a href="{% url 'staff_login' %}">{% t "Ekip girişi" %}</a></p>
     </div>
   </section>
 </main>

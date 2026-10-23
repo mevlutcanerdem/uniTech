@@ -4,31 +4,47 @@
   <div class="t-body">
     <div class="t-top">
       <a class="t-title" href="{% url 'ticket' t.id %}">{{ t.title }}</a>
-      <span class="pill">{{ t.status|status_label }}</span>
+      <span class="pill">{{ t.status|status_label:LANG }}</span>
     </div>
     {% if show_desc %}<p class="t-desc">{{ t.description|truncatechars:220 }}</p>{% endif %}
     <div class="t-meta">
       <span class="code">{{ t.code }}</span>
-      <span>{% icon "pin" 15 %}{{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</span>
-      <span class="prio prio-{{ t.priority }}{% if t.priority == 'acil' %} urgent{% endif %}">{{ t.priority|priority_label }}</span>
-      <span title="{{ t.created_at|date:'j F Y H:i' }}">{% icon "clock" 15 %}{{ t.created_at|timesince }} önce</span>
+      <span>{% icon "pin" 15 %}{{ t.building|building_label:LANG }}{% if t.room %} · {{ t.room }}{% endif %}</span>
+      <span class="prio prio-{{ t.priority }}{% if t.priority == 'acil' %} urgent{% endif %}">{{ t.priority|priority_label:LANG }}</span>
+      <span title="{{ t.created_at|date:'j F Y H:i' }}">{% icon "clock" 15 %}{% t "{x} önce" x=t.created_at|timesince %}</span>
       {% if manage %}<span>{% icon "user" 15 %}{{ t.reporter_name }}</span>{% endif %}
     </div>
   </div>
   {% if manage %}
   <div class="t-actions">
-    {% for key, label in statuses.items %}
-    <form method="post" action="{% url 'ticket_update' t.id %}">
-      {% csrf_token %}<input type="hidden" name="next" value="{{ return_to|default:request.get_full_path }}">
-      <input type="hidden" name="status" value="{{ key }}">
-      <button class="btn small st st-{{ key }}" type="submit" aria-pressed="{% if t.status == key %}true{% else %}false{% endif %}">{{ label }}</button>
-    </form>
-    {% endfor %}
+    {% with nxt=return_to|default:request.get_full_path %}
+    <div class="assign">
+      {% if not t.assignee_id %}
+        <span class="who none">{% t "Atanmadı" %}</span>
+        <form method="post" action="{% url 'ticket_update' t.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input type="hidden" name="assign" value="me"><button class="btn small take" type="submit">{% icon "user" 15 %}{% t "Üzerine al" %}</button></form>
+      {% elif t.assignee_id == me.id %}
+        <span class="who mine"><span class="avatar xs">{{ me.name|initials }}</span>{% t "Sende" %}</span>
+        <form method="post" action="{% url 'ticket_update' t.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input type="hidden" name="assign" value="none"><button class="btn small ghost" type="submit">{% t "Bırak" %}</button></form>
+      {% else %}
+        <span class="who"><span class="avatar xs">{{ t.assignee_name|initials }}</span>{% t "{name} üzerinde" name=t.assignee_name %}</span>
+        <form method="post" action="{% url 'ticket_update' t.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}"><input type="hidden" name="assign" value="me"><button class="btn small ghost" type="submit">{% t "Devral" %}</button></form>
+      {% endif %}
+    </div>
+    <div class="st-group">
+      {% for key, label in statuses.items %}
+      <form method="post" action="{% url 'ticket_update' t.id %}">
+        {% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}">
+        <input type="hidden" name="status" value="{{ key }}">
+        <button class="btn small st st-{{ key }}" type="submit" aria-pressed="{% if t.status == key %}true{% else %}false{% endif %}">{{ key|status_label:LANG }}</button>
+      </form>
+      {% endfor %}
+    </div>
     <form class="note" method="post" action="{% url 'ticket_update' t.id %}">
-      {% csrf_token %}<input type="hidden" name="next" value="{{ return_to|default:request.get_full_path }}">
-      <input type="text" name="note" maxlength="500" placeholder="Öğrenciye not yaz" aria-label="Not">
-      <button class="btn small" type="submit">Not ekle</button>
+      {% csrf_token %}<input type="hidden" name="next" value="{{ nxt }}">
+      <input type="text" name="note" maxlength="500" placeholder="{% t 'Öğrenciye not yaz' %}" aria-label="{% t 'Not' %}">
+      <button class="btn small" type="submit">{% t "Not ekle" %}</button>
     </form>
+    {% endwith %}
   </div>
   {% endif %}
 </li>

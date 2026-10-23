@@ -7,5 +7,6 @@ def current_user(request):
         "me": user,
         "is_staff": bool(user and user.get("role") in ("staff", "admin")),
         "is_admin": bool(user and user.get("role") == "admin"),
+        "LANG": getattr(request, "LANG", "tr"),
         "API_PUBLIC_URL": settings.API_PUBLIC_URL,
     }

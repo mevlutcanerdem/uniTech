@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% load portal_icons %}
-{% block title %}Bulunamadı{% endblock %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Bu arıza bulunamadı" %}{% endblock %}
 {% block page_class %}narrow{% endblock %}
 {% block content %}
-<div class="empty"><span class="tile cc-diger">{% icon "search" 26 %}</span><strong>Bu arıza bulunamadı</strong>Silinmiş olabilir ya da görüntüleme yetkin yok. <a href="{% url 'mine' %}">Bildirimlerime dön</a></div>
+<div class="empty"><span class="tile cc-diger">{% icon "search" 26 %}</span><strong>{% t "Bu arıza bulunamadı" %}</strong><span>{% t "Silinmiş olabilir ya da görüntüleme yetkin yok." %} <a href="{% url 'mine' %}">{% t "Bildirimlerime dön" %}</a></span></div>
 {% endblock %}

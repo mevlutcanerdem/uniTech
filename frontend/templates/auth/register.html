@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% load portal_icons %}
-{% block title %}Kayıt ol{% endblock %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Kayıt ol" %}{% endblock %}
 {% block body %}
 <main class="auth">
   {% include "auth/_brand.html" %}
@@ -8,29 +8,29 @@
     <div class="auth-card">
       {% include "_messages.html" %}
       <div>
-        <h2>Hesap oluştur</h2>
-        <p class="card-sub">Sadece @agu.edu.tr uzantılı okul e-postasıyla kayıt olunabilir.</p>
+        <h2>{% t "Hesap oluştur" %}</h2>
+        <p class="card-sub">{% t "Sadece @agu.edu.tr uzantılı okul e-postasıyla kayıt olunabilir." %}</p>
       </div>
       <form class="stack" method="post" novalidate>
         {% csrf_token %}
-        <label for="name">Ad soyad
+        <label for="name">{% t "Ad soyad" %}
           <span class="field-icon">{% icon "user" 18 %}<input id="name" name="name" autocomplete="name" value="{{ name }}" maxlength="80" required></span>
         </label>
-        <label for="email">Okul e-postası
+        <label for="email">{% t "Okul e-postası" %}
           <span class="field-icon">{% icon "message" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
         </label>
         <div class="row">
-          <label for="password">Şifre <small>En az 8 karakter</small>
+          <label for="password">{% t "Şifre" %} <small>{% t "En az 8 karakter" %}</small>
             <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
           </label>
-          <label for="password2">Şifre tekrar <small>&nbsp;</small>
+          <label for="password2">{% t "Şifre tekrar" %} <small>&nbsp;</small>
             <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="8" required>
           </label>
         </div>
         {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
-        <button class="btn primary" type="submit">Kayıt ol</button>
+        <button class="btn primary" type="submit">{% t "Kayıt ol" %}</button>
       </form>
-      <p class="center">Zaten hesabın var mı? <a href="{% url 'login' %}">Giriş yap</a></p>
+      <p class="center">{% t "Zaten hesabın var mı?" %} <a href="{% url 'login' %}">{% t "Giriş yap" %}</a></p>
     </div>
   </section>
 </main>

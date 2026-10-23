@@ -1,14 +1,14 @@
 {% load portal_icons portal_tags %}
 <section class="auth-brand">
-  <span class="badge">{% icon "shield" 16 %} Abdullah Gül Üniversitesi</span>
-  <h1>Kampüsteki arızalar, tek tıkla teknik ekipte.</h1>
-  <p>Bozuk projeksiyon, kopan Wi‑Fi, damlayan musluk. Gördüğün sorunu bildir, çözülene kadar adım adım takip et.</p>
+  <span class="badge">{% icon "shield" 16 %} {% t "Abdullah Gül Üniversitesi" %}</span>
+  <h1>{% t "Kampüsteki arızalar, tek tıkla teknik ekipte." %}</h1>
+  <p>{% t "Bozuk projeksiyon, kopan Wi‑Fi, damlayan musluk. Gördüğün sorunu bildir, çözülene kadar adım adım takip et." %}</p>
   <div class="cat-strip" aria-hidden="true">
     {% for k in "elektrik bilgisayar internet tesisat iklim kapi temizlik"|split %}<span class="tile cc-{{ k }}">{% icon k 18 %}</span>{% endfor %}
   </div>
   <ul class="features">
-    <li><span class="tile">{% icon "send" 20 %}</span><div><b>Saniyeler içinde bildir</b><span>Arıza türünü, yerini ve aciliyetini seç, gönder.</span></div></li>
-    <li><span class="tile">{% icon "bell" 20 %}</span><div><b>Ekip anında görür</b><span>Bildirimin teknik ekibin paneline canlı olarak düşer.</span></div></li>
-    <li><span class="tile">{% icon "check" 20 %}</span><div><b>Durumu takip et</b><span>Yeni, işlemde, çözüldü. Ekibin notlarını da gör.</span></div></li>
+    <li><span class="tile">{% icon "send" 20 %}</span><div><b>{% t "Saniyeler içinde bildir" %}</b><span>{% t "Arıza türünü, yerini ve aciliyetini seç, gönder." %}</span></div></li>
+    <li><span class="tile">{% icon "bell" 20 %}</span><div><b>{% t "Ekip anında görür" %}</b><span>{% t "Bildirimin teknik ekibin paneline canlı olarak düşer." %}</span></div></li>
+    <li><span class="tile">{% icon "check" 20 %}</span><div><b>{% t "Durumu takip et" %}</b><span>{% t "Yeni, işlemde, çözüldü. Ekibin notlarını da gör." %}</span></div></li>
   </ul>
 </section>

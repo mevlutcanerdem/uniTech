@@ -27,6 +27,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "portal.i18n.LanguageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -60,6 +61,7 @@ CSRF_COOKIE_SECURE = not DEBUG
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
 LANGUAGE_CODE = "tr"
+LANGUAGES = [("tr", "Türkçe"), ("en", "English")]
 TIME_ZONE = "Europe/Istanbul"
 USE_I18N = True
 USE_TZ = True
