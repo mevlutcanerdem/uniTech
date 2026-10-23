@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load portal_tags %}
+{% block title %}Kullanıcılar{% endblock %}
+{% block content %}
+<div class="head">
+  <span class="eyebrow">Yönetici</span>
+  <h1>Kullanıcılar ve roller</h1>
+  <p class="lede">Teknik ekip üyelerine “Teknik ekip” rolünü ver; panele erişip arıza durumlarını güncelleyebilirler.</p>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Ad soyad</th><th>E-posta</th><th>Kayıt</th><th>Rol</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.name }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.created_at|date:"j M Y" }}</td>
+        <td>
+          {% if u.id == me.id %}{{ u.role|role_label }} (sen){% else %}
+          <form method="post" action="{% url 'set_role' u.id %}">
+            {% csrf_token %}
+            <select name="role" aria-label="{{ u.name }} rolü">
+              {% for key, label in roles.items %}<option value="{{ key }}" {% if u.role == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button class="btn small" type="submit">Kaydet</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

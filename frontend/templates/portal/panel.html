@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Teknik ekip paneli{% endblock %}
+{% block content %}
+<div class="head">
+  <span class="eyebrow">Teknik ekip</span>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1>Gelen arızalar</h1>
+    <span class="live" id="live">Bağlanıyor…</span>
+  </div>
+  <p class="lede">Acil olanlar en üstte. Yeni bildirimler sayfa yenilenmeden buraya düşer.</p>
+</div>
+<form class="filters" method="get" id="filters">
+  <select name="status" aria-label="Duruma göre" onchange="this.form.submit()">
+    <option value="acik" {% if filters.status == 'acik' %}selected{% endif %}>Açık olanlar</option>
+    {% for key, label in statuses.items %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    <option value="hepsi" {% if filters.status == 'hepsi' %}selected{% endif %}>Hepsi</option>
+  </select>
+  <select name="category" aria-label="Türe göre" onchange="this.form.submit()">
+    <option value="">Tüm türler</option>
+    {% for key, label in categories.items %}<option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Ara: bina, oda, kod…" aria-label="Ara">
+</form>
+<div id="panel-body" style="display:flex;flex-direction:column;gap:16px">
+  {% include "portal/_panel_body.html" %}
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.UNITECH = {
+    streamUrl: "{{ API_PUBLIC_URL|escapejs }}/api/events?token={{ stream_token|urlencode|escapejs }}",
+    listUrl: "{% url 'panel_list' %}"
+  };
+</script>
+<script src="{% static 'js/panel.js' %}"></script>
+{% endblock %}

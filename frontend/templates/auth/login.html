@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Giriş{% endblock %}
+{% block content %}
+<div class="authbox">
+  <div class="head">
+    <span class="eyebrow">Abdullah Gül Üniversitesi</span>
+    <h1>Kampüsteki arızaları tek yerden bildir</h1>
+    <p class="lede">Okul e-postanla giriş yap. Bildirimin doğrudan teknik ekibe gider.</p>
+  </div>
+  <form class="card stack" method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Okul e-postası
+      <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required>
+    </label>
+    <label for="password">Şifre
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </label>
+    {% if error %}<p class="err">{{ error }}</p>{% endif %}
+    <button class="btn primary" type="submit">Giriş yap</button>
+  </form>
+  <p class="center">Hesabın yok mu? <a href="{% url 'register' %}">Okul e-postanla kayıt ol</a></p>
+</div>
+{% endblock %}

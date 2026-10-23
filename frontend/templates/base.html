@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}uniTech{% endblock %} · AGÜ Teknik Destek</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{% url 'index' %}">uniTech <small>AGÜ Teknik Destek</small></a>
+      {% if me %}
+      {% with u=request.resolver_match.url_name %}
+      <nav class="nav" aria-label="Ana menü">
+        <a href="{% url 'report' %}" {% if u == 'report' %}aria-current="page"{% endif %}>Arıza bildir</a>
+        <a href="{% url 'mine' %}" {% if u == 'mine' %}aria-current="page"{% endif %}>Bildirimlerim</a>
+        {% if is_staff %}<a href="{% url 'panel' %}" {% if u == 'panel' %}aria-current="page"{% endif %}>Teknik ekip paneli</a>{% endif %}
+        {% if is_admin %}<a href="{% url 'users' %}" {% if u == 'users' %}aria-current="page"{% endif %}>Kullanıcılar</a>{% endif %}
+      </nav>
+      {% endwith %}
+      <div class="whoami">
+        <span>{{ me.name }}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="linkbtn" type="submit">Çıkış</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </header>
+  <main class="{% block main_class %}{% endblock %}">
+    {% for m in messages %}<div class="flash {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

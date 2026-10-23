@@ -1,0 +1,13 @@
+<div class="stats">
+  <div class="stat s-new"><b>{{ stats.yeni|default:0 }}</b><span>Yeni</span></div>
+  <div class="stat s-work"><b>{{ stats.islemde|default:0 }}</b><span>İşlemde</span></div>
+  <div class="stat s-urgent"><b>{{ stats.acil_acik|default:0 }}</b><span>Açık acil</span></div>
+  <div class="stat s-done"><b>{{ stats.cozuldu|default:0 }}</b><span>Çözüldü</span></div>
+</div>
+<ul class="list">
+  {% for t in tickets %}
+    {% include "portal/_ticket_card.html" with t=t manage=True show_desc=True %}
+  {% empty %}
+    <li class="empty"><strong>Bu filtrede bildirim yok</strong>Yeni bir arıza bildirildiğinde burada anında görünür.</li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Bulunamadı{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="empty"><strong>Bu arıza bulunamadı</strong>Silinmiş olabilir ya da görüntüleme yetkin yok. <a href="{% url 'mine' %}">Bildirimlerime dön</a></div>
+{% endblock %}

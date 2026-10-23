@@ -1,0 +1,30 @@
+services:
+  api:
+    build: ./backend
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET tanımla (.env dosyasına bak)}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8000}
+    volumes:
+      - api-data:/data
+    ports:
+      - "8080:8080"   # tarayıcı canlı panel akışı için buna bağlanır
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    environment:
+      API_URL: http://api:8080
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8080}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY tanımla (.env dosyasına bak)}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:

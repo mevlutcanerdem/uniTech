@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+frontend/staticfiles/
+backend/data/
+backend/unitech-api
+.venv/

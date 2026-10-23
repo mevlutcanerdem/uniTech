@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load portal_tags %}
+{% block title %}{{ t.code }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="head">
+  <span class="eyebrow">{{ t.code }}</span>
+  <h1>{{ t.title }}</h1>
+</div>
+<article class="ticket st-{{ t.status }}">
+  <div class="t-top">
+    <span class="code">{{ t.category|category_label }}</span>
+    <span class="pill">{{ t.status|status_label }}</span>
+  </div>
+  <p class="t-desc">{{ t.description }}</p>
+  <div class="t-meta">
+    <span>Konum: {{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</span>
+    <span {% if t.priority == 'acil' %}class="urgent"{% endif %}>Aciliyet: {{ t.priority|priority_label }}</span>
+    <span>{{ t.created_at|date:"j F Y H:i" }}</span>
+    {% if is_staff %}<span>{{ t.reporter_name }} · {{ t.reporter_email }}</span>{% endif %}
+  </div>
+</article>
+
+{% if is_staff %}
+<form class="card stack" method="post" action="{% url 'ticket_update' t.id %}">
+  {% csrf_token %}
+  <h2>Durumu güncelle</h2>
+  <fieldset>
+    <legend>Durum</legend>
+    <div class="chips three">
+      {% for key, label in statuses.items %}
+      <label class="chip"><input type="radio" name="status" value="{{ key }}" {% if t.status == key %}checked{% endif %}><span>{{ label }}</span></label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <label for="note">Öğrenciye not <small>İsteğe bağlı, öğrenci bu notu görür</small>
+    <input id="note" name="note" maxlength="500" placeholder="Teknisyen yolda, 30 dk içinde orada.">
+  </label>
+  <button class="btn primary" type="submit">Kaydet</button>
+</form>
+{% endif %}
+
+<section class="card" style="display:flex;flex-direction:column;gap:14px">
+  <h2>Geçmiş</h2>
+  <ol class="timeline">
+    {% for h in t.history reversed %}
+    <li>
+      <time datetime="{{ h.at|date:'c' }}">{{ h.at|date:"j M H:i" }}</time>
+      <div>
+        {% if h.status %}<strong>{{ h.status|status_label }}</strong>{% endif %}
+        {% if h.note %}{% if h.status %} · {% endif %}{{ h.note }}{% endif %}
+        <div class="hint">{{ h.by_name }}</div>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+<p><a href="{% if is_staff %}{% url 'panel' %}{% else %}{% url 'mine' %}{% endif %}">← Listeye dön</a></p>
+{% endblock %}
