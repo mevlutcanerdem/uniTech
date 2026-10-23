@@ -20,6 +20,9 @@ func getenv(k, def string) string {
 
 func main() {
 	addr := getenv("ADDR", ":8080")
+	if port := os.Getenv("PORT"); port != "" { // Render gibi platformlar PORT verir
+		addr = ":" + port
+	}
 	dataPath := getenv("DATA_PATH", "data/unitech.json")
 
 	secret := os.Getenv("JWT_SECRET")
@@ -37,9 +40,20 @@ func main() {
 		}
 	}
 
-	store, err := OpenStore(dataPath)
+	var p persister
+	var err error
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		p, err = newPGPersister(dbURL)
+		dataPath = "PostgreSQL"
+	} else {
+		p, err = newFilePersister(dataPath)
+	}
 	if err != nil {
-		log.Fatalf("veri dosyası açılamadı: %v", err)
+		log.Fatalf("veri deposu açılamadı: %v", err)
+	}
+	store, err := OpenStore(p)
+	if err != nil {
+		log.Fatalf("veri okunamadı: %v", err)
 	}
 
 	app := &App{

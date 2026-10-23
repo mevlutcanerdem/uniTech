@@ -72,3 +72,6 @@ try:  # whitenoise yoksa (ör. sadece geliştirme) sessizce devre dışı bırak
     import whitenoise  # noqa: F401
 except ImportError:
     MIDDLEWARE.remove("whitenoise.middleware.WhiteNoiseMiddleware")
+
+# Render/Vercel gibi HTTPS sonlandıran bir proxy arkasında çalışırken.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

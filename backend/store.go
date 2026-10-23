@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -95,25 +93,22 @@ type data struct {
 	Tickets      []Ticket `json:"tickets"`
 }
 
-// Store tüm veriyi tek bir JSON dosyasında tutar. Küçük/orta ölçekli bir
-// kampüs için yeterlidir; ileride aynı metotlarla SQL veritabanına geçilebilir.
+// Store tüm veriyi bellekte tutar ve her değişiklikte persister'a yazar
+// (yerelde JSON dosyası, sunucuda PostgreSQL). Bir kampüs için yeterlidir.
 type Store struct {
-	mu   sync.RWMutex
-	path string
-	d    data
+	mu sync.RWMutex
+	p  persister
+	d  data
 }
 
-func OpenStore(path string) (*Store, error) {
-	s := &Store{path: path, d: data{NextUserID: 1, NextTicketID: 1}}
-	b, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return nil, err
-		}
-		return s, s.saveLocked()
-	}
+func OpenStore(p persister) (*Store, error) {
+	s := &Store{p: p, d: data{NextUserID: 1, NextTicketID: 1}}
+	b, err := p.Load()
 	if err != nil {
 		return nil, err
+	}
+	if b == nil {
+		return s, s.saveLocked()
 	}
 	if err := json.Unmarshal(b, &s.d); err != nil {
 		return nil, err
@@ -121,17 +116,13 @@ func OpenStore(path string) (*Store, error) {
 	return s, nil
 }
 
-// saveLocked yazma kilidi alınmışken çağrılır; atomik olarak dosyaya yazar.
+// saveLocked yazma kilidi alınmışken çağrılır.
 func (s *Store) saveLocked() error {
-	b, err := json.MarshalIndent(s.d, "", "  ")
+	b, err := json.Marshal(s.d)
 	if err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.path)
+	return s.p.Save(b)
 }
 
 // ---- Kullanıcılar ----

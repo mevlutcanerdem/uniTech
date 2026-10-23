@@ -11,7 +11,8 @@ import (
 
 func newTestApp(t *testing.T) *httptest.Server {
 	t.Helper()
-	store, err := OpenStore(filepath.Join(t.TempDir(), "db.json"))
+	fp, _ := newFilePersister(filepath.Join(t.TempDir(), "db.json"))
+	store, err := OpenStore(fp)
 	if err != nil {
 		t.Fatal(err)
 	}
