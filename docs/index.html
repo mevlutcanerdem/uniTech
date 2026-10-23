@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Abdullah Gül Üniversitesi arıza bildirim sistemi uniTech'in tanıtım sürümü.">
+<title>uniTech Demo · AGÜ Teknik Destek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: work-order desk — one narrow column, tabs on top, each ticket a printed slip with a status stripe */
+:root{
+  --bg:#f6f3f2; --surface:#ffffff; --ink:#1d1615; --muted:#6f6260; --line:#e4dbd9;
+  --accent:#b8202f; --accent-ink:#ffffff; --accent-soft:#f7e3e5;
+  --new:#b8202f; --work:#b26a00; --done:#2f7d4f;
+  --new-bg:#fbe9eb; --work-bg:#fdf1dc; --done-bg:#e3f2e8;
+  --f-body:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161212; --surface:#201a1a; --ink:#f1eaea; --muted:#a8999a; --line:#3a3030;
+  --accent:#e2505d; --accent-ink:#1a0d0e; --accent-soft:#3a1d20;
+  --new:#ef6a75; --work:#e5a443; --done:#6cc28e;
+  --new-bg:#3a1d20; --work-bg:#3a2c14; --done-bg:#183022; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161212; --surface:#201a1a; --ink:#f1eaea; --muted:#a8999a; --line:#3a3030;
+  --accent:#e2505d; --accent-ink:#1a0d0e; --accent-soft:#3a1d20;
+  --new:#ef6a75; --work:#e5a443; --done:#6cc28e;
+  --new-bg:#3a1d20; --work-bg:#3a2c14; --done-bg:#183022; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(26px,6vw,36px);line-height:1.1;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--muted);margin:0;max-width:60ch}
+nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:4px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav button{flex:1;min-width:0;border:0;background:transparent;color:var(--muted);font:600 15px var(--f-body);padding:10px 6px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+nav .count{font-family:var(--f-mono);font-size:12px;font-weight:500;background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:0 7px;line-height:18px}
+nav .count:empty{display:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;color:var(--muted);font-size:14px}
+form{display:flex;flex-direction:column;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px;min-width:0}
+label small{font-weight:400;color:var(--muted)}
+input,select,textarea{font:16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+textarea{min-height:110px;resize:vertical}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+legend{font-weight:600;font-size:14px;margin-bottom:6px}
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.cats{grid-template-columns:repeat(2,1fr)}}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.chip span{display:block;text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 6px;font-size:14px;font-weight:500;background:var(--bg)}
+.chip input:checked+span{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--accent)}
+.chip input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.prio{display:flex;gap:8px;flex-wrap:wrap}
+.prio .chip{flex:1;min-width:90px}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;font:700 16px var(--f-body);padding:13px 16px;cursor:pointer}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.err{color:var(--new);font-size:14px;margin:0}
+.ok{border:1px solid var(--done);background:var(--done-bg);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:4px}
+.ok strong{font-size:17px}
+.code{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar select{width:auto;flex:1;min-width:140px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.summary div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column}
+.summary b{font-family:var(--f-mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.summary span{font-size:13px;color:var(--muted)}
+.summary .s-new b{color:var(--new)} .summary .s-work b{color:var(--work)} .summary .s-done b{color:var(--done)}
+.list{display:flex;flex-direction:column;gap:10px;list-style:none;margin:0;padding:0}
+.ticket{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--st);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ticket[data-st="yeni"]{--st:var(--new);--stbg:var(--new-bg)}
+.ticket[data-st="islemde"]{--st:var(--work);--stbg:var(--work-bg)}
+.ticket[data-st="cozuldu"]{--st:var(--done);--stbg:var(--done-bg)}
+.t-top{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.t-id{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.pill{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--st);background:var(--stbg);border-radius:99px;padding:3px 10px}
+.t-title{font-weight:700;font-size:17px;margin:0}
+.t-desc{margin:0;color:var(--ink);overflow-wrap:anywhere;white-space:pre-wrap}
+.t-meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.urgent{color:var(--new);font-weight:700}
+.t-actions{display:flex;gap:6px;flex-wrap:wrap;padding-top:4px;border-top:1px dashed var(--line)}
+.t-actions button{border:1px solid var(--line);background:var(--bg);color:var(--ink);font:600 14px var(--f-body);border-radius:7px;padding:7px 12px;cursor:pointer}
+.t-actions button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.t-actions input{flex:1;min-width:160px;padding:7px 10px;font-size:14px}
+.empty{text-align:center;color:var(--muted);padding:32px 16px;border:1px dashed var(--line);border-radius:var(--r)}
+.empty strong{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.demo{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px;font-size:14px;border:1px dashed var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:8px 12px}
+.demo button{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 13px var(--f-body);border-radius:7px;padding:6px 10px;cursor:pointer}
+.foot{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.ticket{transition:border-color .2s}}
+</style>
+<style>html,body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">uniTech · AGÜ Teknik Destek</span>
+    <h1>Kampüste bir arıza mı gördün?</h1>
+    <p class="lede">Bildirimin doğrudan teknik ekibin paneline düşer. Durumunu buradan takip edebilirsin.</p>
+    <div class="demo"><span><b>Demo modu.</b> Kayıtlar örnektir ve yalnızca bu tarayıcıda tutulur.</span><button type="button" id="reset">Örnekleri sıfırla</button></div>
+  </header>
+
+  <nav role="tablist" aria-label="Bölümler">
+    <button role="tab" id="tab-new" aria-selected="true" data-view="new">Arıza Bildir</button>
+    <button role="tab" id="tab-mine" aria-selected="false" data-view="mine">Bildirimlerim <span class="count" id="mineCount"></span></button>
+    <button role="tab" id="tab-team" aria-selected="false" data-view="team">Teknik Ekip <span class="count" id="openCount"></span></button>
+  </nav>
+
+  <p class="notice" id="conn" hidden></p>
+
+  <!-- Bildir -->
+  <section id="view-new">
+    <div class="ok" id="success" hidden>
+      <strong>Bildirimin teknik ekibe iletildi.</strong>
+      <span>Takip numaran: <span class="code" id="successId"></span>. Durumunu “Bildirimlerim” sekmesinden izleyebilirsin.</span>
+    </div>
+    <form id="form" novalidate>
+      <fieldset>
+        <legend>Arıza türü</legend>
+        <div class="cats" id="cats"></div>
+      </fieldset>
+      <div class="row">
+        <label for="building">Bina
+          <select id="building" required>
+            <option value="">Seç…</option>
+            <option>Ambar</option><option>Çelik Bina</option><option>Fabrika Binası</option>
+            <option>Kütüphane</option><option>Yemekhane</option><option>Yurtlar</option>
+            <option>Spor Salonu</option><option>Açık alan / Kampüs</option><option>Diğer</option>
+          </select>
+        </label>
+        <label for="room">Kat / oda <small>Örn. 2. kat, B-204</small>
+          <input id="room" maxlength="60" placeholder="2. kat, B-204">
+        </label>
+      </div>
+      <label for="title">Kısa başlık
+        <input id="title" maxlength="80" required placeholder="Projeksiyon açılmıyor">
+      </label>
+      <label for="desc">Açıklama <small>Ne oldu, ne zamandır böyle?</small>
+        <textarea id="desc" maxlength="1000" required placeholder="Ders başında projeksiyon cihazı açılıyor ama görüntü gelmiyor. Kablo değiştirdik, olmadı."></textarea>
+      </label>
+      <fieldset>
+        <legend>Aciliyet</legend>
+        <div class="prio">
+          <label class="chip"><input type="radio" name="prio" value="dusuk"><span>Düşük</span></label>
+          <label class="chip"><input type="radio" name="prio" value="orta" checked><span>Orta</span></label>
+          <label class="chip"><input type="radio" name="prio" value="acil"><span>Acil · güvenlik riski</span></label>
+        </div>
+      </fieldset>
+      <div class="row">
+        <label for="name">Ad soyad
+          <input id="name" maxlength="60" required autocomplete="name">
+        </label>
+        <label for="contact">Öğrenci no veya e-posta <small>İsteğe bağlı</small>
+          <input id="contact" maxlength="80" placeholder="ad.soyad@agu.edu.tr">
+        </label>
+      </div>
+      <p class="err" id="formErr" hidden></p>
+      <button class="primary" id="submit" type="submit">Teknik ekibe gönder</button>
+    </form>
+  </section>
+
+  <!-- Bildirimlerim -->
+  <section id="view-mine" hidden>
+    <ul class="list" id="mineList"></ul>
+  </section>
+
+  <!-- Teknik ekip -->
+  <section id="view-team" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="summary">
+      <div class="s-new"><b id="nNew">0</b><span>Yeni</span></div>
+      <div class="s-work"><b id="nWork">0</b><span>İşlemde</span></div>
+      <div class="s-done"><b id="nDone">0</b><span>Çözüldü</span></div>
+    </div>
+    <div class="toolbar">
+      <select id="fStatus" aria-label="Duruma göre filtrele">
+        <option value="acik">Açık olanlar</option><option value="yeni">Yeni</option>
+        <option value="islemde">İşlemde</option><option value="cozuldu">Çözüldü</option><option value="hepsi">Hepsi</option>
+      </select>
+      <select id="fCat" aria-label="Türe göre filtrele"><option value="">Tüm türler</option></select>
+    </div>
+    
+    <ul class="list" id="teamList"></ul>
+  </section>
+
+  <p class="foot">Acil durumlarda (yangın, su baskını, elektrik kaçağı) bildirimin yanında kampüs güvenliğini de ara.</p>
+</div>
+
+<script>
+const CATS={elektrik:"Elektrik",bilgisayar:"Bilgisayar / Projeksiyon",internet:"İnternet / Wi‑Fi",tesisat:"Su / Tesisat",iklim:"Isıtma / Klima",kapi:"Kapı / Mobilya",temizlik:"Temizlik",diger:"Diğer"};
+const ST={yeni:"Yeni",islemde:"İşlemde",cozuldu:"Çözüldü"};
+const PR={dusuk:"Düşük",orta:"Orta",acil:"Acil"};
+const $=id=>document.getElementById(id);
+const ME="demo-ogrenci",KEY="agu-demo-v1";
+const H=36e5;
+function seed(){const n=Date.now();return[
+ {id:"s1",code:"AGÜ-4K2QD",category:"bilgisayar",building:"Çelik Bina",room:"B-204",title:"Projeksiyon görüntü vermiyor",desc:"Cihaz açılıyor ama ekrana görüntü gelmiyor. HDMI kablosunu değiştirdik, sonuç aynı.",priority:"orta",name:"Elif Yılmaz",contact:"elif.yilmaz@agu.edu.tr",status:"islemde",teamNote:"Teknisyen yolda, 30 dk içinde sınıfta.",reporterId:ME,createdAt:n-2*H},
+ {id:"s2",code:"AGÜ-4JX8M",category:"tesisat",building:"Yurtlar",room:"A Blok, 3. kat banyo",title:"Lavabo musluğu su kaçırıyor",desc:"Musluk tam kapanmıyor, sürekli damlıyor ve zemine su birikiyor.",priority:"orta",name:"Elif Yılmaz",contact:"",status:"cozuldu",teamNote:"Conta değiştirildi.",reporterId:ME,createdAt:n-30*H},
+ {id:"s3",code:"AGÜ-4KB71",category:"elektrik",building:"Kütüphane",room:"2. kat çalışma alanı",title:"Prizden kıvılcım çıkıyor",desc:"Pencere kenarındaki prize şarj aleti takınca kıvılcım çıktı ve yanık kokusu var. Prizi kimse kullanmasın diye üstüne not bıraktık.",priority:"acil",name:"Mert Kaya",contact:"2210205041",status:"yeni",reporterId:"x1",createdAt:n-.3*H},
+ {id:"s4",code:"AGÜ-4K9ZT",category:"internet",building:"Ambar",room:"Zemin kat",title:"Eduroam sürekli kopuyor",desc:"Zemin katta Wi‑Fi her birkaç dakikada bir bağlantıyı kesiyor.",priority:"orta",name:"Zeynep Demir",contact:"",status:"yeni",reporterId:"x2",createdAt:n-1.2*H},
+ {id:"s5",code:"AGÜ-4K5HA",category:"iklim",building:"Fabrika Binası",room:"F-112",title:"Klima çalışmıyor",desc:"Sınıf çok sıcak, klima kumandaya tepki vermiyor.",priority:"dusuk",name:"Can Arslan",contact:"",status:"islemde",reporterId:"x3",createdAt:n-5*H},
+ {id:"s6",code:"AGÜ-4J1PL",category:"kapi",building:"Spor Salonu",room:"Soyunma odası",title:"Dolap kapağı kırık",desc:"14 numaralı dolabın menteşesi kopmuş.",priority:"dusuk",name:"Ayşe Çelik",contact:"",status:"cozuldu",reporterId:"x4",createdAt:n-50*H}]}
+let tickets;
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(s))return s}catch(e){}return seed()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(tickets))}catch(e){}}
+tickets=load();
+const canManage=true;
+
+$("cats").innerHTML=Object.entries(CATS).map(([k,v],i)=>`<label class="chip"><input type="radio" name="cat" value="${k}"${i===0?" checked":""}><span>${v}</span></label>`).join("");
+$("fCat").insertAdjacentHTML("beforeend",Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join(""));
+
+function show(view){
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===view));
+  ["new","mine","team"].forEach(v=>$("view-"+v).hidden=v!==view);
+  $("view-team").style.display=view==="team"?"flex":"none";
+}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
+show(({bildir:"new",bildirimlerim:"mine",ekip:"team"})[location.hash.slice(1)]||"new");
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function when(ts){
+  if(!ts)return"";const d=new Date(ts),m=(Date.now()-ts)/6e4;
+  if(m<1)return"az önce";if(m<60)return Math.floor(m)+" dk önce";if(m<1440)return Math.floor(m/60)+" sa önce";
+  return d.toLocaleDateString("tr-TR",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+}
+function card(t,manage){
+  const loc=[t.building,t.room].filter(Boolean).join(" · ");
+  let html=`<li class="ticket" data-st="${esc(t.status)}">
+    <div class="t-top"><span class="t-id">${esc(t.code)} · ${esc(CATS[t.category]||"Diğer")}</span><span class="pill">${esc(ST[t.status])}</span></div>
+    <p class="t-title">${esc(t.title)}</p>
+    <p class="t-desc">${esc(t.desc)}</p>
+    <div class="t-meta"><span>Konum: ${esc(loc||"—")}</span><span class="${t.priority==="acil"?"urgent":""}">Aciliyet: ${esc(PR[t.priority]||"Orta")}</span><span>${esc(when(t.createdAt))}</span>${manage?`<span>${esc(t.name)}${t.contact?" · "+esc(t.contact):""}</span>`:""}</div>`;
+  if(t.teamNote&&!manage)html+=`<div class="t-meta"><span><b>Ekip notu:</b> ${esc(t.teamNote)}</span></div>`;
+  if(manage)html+=`<div class="t-actions" data-id="${esc(t.id)}">${Object.entries(ST).map(([k,v])=>`<button type="button" data-set="${k}" aria-pressed="${t.status===k}">${v}</button>`).join("")}
+      <input type="text" maxlength="200" placeholder="Öğrenciye not yaz, Enter’a bas" aria-label="Ekip notu" value="${esc(t.teamNote||"")}"></div>`;
+  return html+"</li>";
+}
+function emptyBox(a,b){return `<li class="empty"><strong>${a}</strong>${b}</li>`}
+function render(){
+  const mine=tickets.filter(t=>t.reporterId===ME).sort((a,b)=>b.createdAt-a.createdAt);
+  $("mineList").innerHTML=mine.length?mine.map(t=>card(t,false)).join(""):emptyBox("Henüz bir bildirimin yok","“Arıza Bildir” sekmesinden gönder; durumu burada görünür.");
+  $("mineCount").textContent=mine.filter(t=>t.status!=="cozuldu").length||"";
+  const c={yeni:0,islemde:0,cozuldu:0};tickets.forEach(t=>c[t.status]++);
+  $("nNew").textContent=c.yeni;$("nWork").textContent=c.islemde;$("nDone").textContent=c.cozuldu;
+  $("openCount").textContent=(c.yeni+c.islemde)||"";
+  const fs=$("fStatus").value,fc=$("fCat").value,rank={acil:0,orta:1,dusuk:2};
+  const list=tickets.filter(t=>(fs==="hepsi"||(fs==="acik"?t.status!=="cozuldu":t.status===fs))&&(!fc||t.category===fc))
+    .sort((a,b)=>(a.status==="cozuldu")-(b.status==="cozuldu")||rank[a.priority]-rank[b.priority]||b.createdAt-a.createdAt);
+  $("teamList").innerHTML=list.length?list.map(t=>card(t,true)).join(""):emptyBox("Bu filtrede bildirim yok","Filtreyi değiştirerek diğer bildirimleri görebilirsin.");
+}
+$("fStatus").addEventListener("change",render);$("fCat").addEventListener("change",render);
+$("teamList").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-set]");if(!b)return;
+  const t=tickets.find(x=>x.id===b.closest(".t-actions").dataset.id);t.status=b.dataset.set;save();render();
+});
+$("teamList").addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||e.target.tagName!=="INPUT")return;
+  const t=tickets.find(x=>x.id===e.target.closest(".t-actions").dataset.id);t.teamNote=e.target.value.trim();save();render();
+});
+$("reset").addEventListener("click",()=>{tickets=seed();save();$("success").hidden=true;render()});
+$("form").addEventListener("submit",e=>{
+  e.preventDefault();const err=$("formErr");err.hidden=true;
+  const v={category:document.querySelector("input[name=cat]:checked").value,building:$("building").value,room:$("room").value.trim(),
+    title:$("title").value.trim(),desc:$("desc").value.trim(),priority:document.querySelector("input[name=prio]:checked").value,
+    name:$("name").value.trim(),contact:$("contact").value.trim()};
+  const miss=[!v.building&&"bina",!v.title&&"kısa başlık",!v.desc&&"açıklama",!v.name&&"ad soyad"].filter(Boolean);
+  if(miss.length){err.textContent="Eksik alan: "+miss.join(", ")+".";err.hidden=false;return}
+  const code="AGÜ-"+Date.now().toString(36).slice(-5).toUpperCase();
+  tickets.unshift({...v,id:"t"+Date.now(),code,status:"yeni",reporterId:ME,createdAt:Date.now()});save();
+  ["room","title","desc"].forEach(id=>$(id).value="");$("building").value="";
+  $("successId").textContent=code;$("success").hidden=false;render();
+});
+$("name").value="Elif Yılmaz";
+render();
+</script>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
 # uniTech
 
+**Demo:** https://mevlutcanerdem.github.io/unitech/ (örnek verilerle, giriş gerektirmez)
+
 Abdullah Gül Üniversitesi için arıza bildirim sistemi. Öğrenciler kampüste gördükleri arızaları
 (elektrik, projeksiyon, Wi‑Fi, tesisat, klima…) siteye girer. Bildirim teknik ekibin paneline
 **anında** düşer, ekip durumu güncelledikçe öğrenci kendi sayfasından takip eder.
