@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static portal_icons %}
 {% block title %}Teknik ekip paneli{% endblock %}
 {% block content %}
-<div class="head">
-  <span class="eyebrow">Teknik ekip</span>
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+<div class="page-head">
+  <div>
     <h1>Gelen arızalar</h1>
-    <span class="live" id="live">Bağlanıyor…</span>
+    <p>Acil olanlar en üstte. Yeni bildirimler sayfa yenilenmeden buraya düşer.</p>
   </div>
-  <p class="lede">Acil olanlar en üstte. Yeni bildirimler sayfa yenilenmeden buraya düşer.</p>
+  <span class="live" id="live">Bağlanıyor…</span>
 </div>
-<form class="filters" method="get" id="filters">
+<form class="toolbar" method="get" id="filters">
   <select name="status" aria-label="Duruma göre" onchange="this.form.submit()">
     <option value="acik" {% if filters.status == 'acik' %}selected{% endif %}>Açık olanlar</option>
     {% for key, label in statuses.items %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
@@ -20,12 +19,12 @@
     <option value="">Tüm türler</option>
     {% for key, label in categories.items %}<option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
   </select>
-  <input type="search" name="q" value="{{ filters.q }}" placeholder="Ara: bina, oda, kod…" aria-label="Ara">
+  <span class="field-icon search">{% icon "search" 18 %}<input type="search" name="q" value="{{ filters.q }}" placeholder="Bina, oda veya takip no ara" aria-label="Ara"></span>
 </form>
-<div id="panel-body" style="display:flex;flex-direction:column;gap:16px">
+<div id="panel-body" style="display:flex;flex-direction:column;gap:18px">
   {% include "portal/_panel_body.html" %}
 </div>
-<div class="toast" id="toast" role="status" hidden></div>
+<div class="toast" id="toast" role="status" hidden>{% icon "bell" 18 %}<span id="toast-text"></span></div>
 {% endblock %}
 {% block scripts %}
 <script>

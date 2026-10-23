@@ -4,10 +4,11 @@
   const body = document.getElementById("panel-body");
   const live = document.getElementById("live");
   const toast = document.getElementById("toast");
+  const toastText = document.getElementById("toast-text");
   let toastTimer, refreshTimer, busy = false;
 
   function showToast(text) {
-    toast.textContent = text;
+    toastText.textContent = text;
     toast.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => (toast.hidden = true), 5000);

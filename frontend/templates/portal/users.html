@@ -1,23 +1,25 @@
 {% extends "base.html" %}
-{% load portal_tags %}
+{% load portal_tags portal_icons %}
 {% block title %}Kullanıcılar{% endblock %}
 {% block content %}
-<div class="head">
-  <span class="eyebrow">Yönetici</span>
-  <h1>Kullanıcılar ve roller</h1>
-  <p class="lede">Teknik ekip üyelerine “Teknik ekip” rolünü ver; panele erişip arıza durumlarını güncelleyebilirler.</p>
+<div class="page-head">
+  <div>
+    <h1>Kullanıcılar ve roller</h1>
+    <p>Teknik ekip üyelerine “Teknik ekip” rolünü ver; panele erişip arıza durumlarını güncelleyebilirler.</p>
+  </div>
 </div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Ad soyad</th><th>E-posta</th><th>Kayıt</th><th>Rol</th></tr></thead>
+    <thead><tr><th>Kişi</th><th>E-posta</th><th>Kayıt</th><th>Rol</th><th>Değiştir</th></tr></thead>
     <tbody>
       {% for u in users %}
       <tr>
-        <td>{{ u.name }}</td>
+        <td><span class="person"><span class="avatar">{{ u.name|initials }}</span>{{ u.name }}</span></td>
         <td>{{ u.email }}</td>
         <td>{{ u.created_at|date:"j M Y" }}</td>
+        <td><span class="role role-{{ u.role }}">{{ u.role|role_label }}</span></td>
         <td>
-          {% if u.id == me.id %}{{ u.role|role_label }} (sen){% else %}
+          {% if u.id == me.id %}<span class="hint">Sen</span>{% else %}
           <form method="post" action="{% url 'set_role' u.id %}">
             {% csrf_token %}
             <select name="role" aria-label="{{ u.name }} rolü">

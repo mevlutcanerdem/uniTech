@@ -258,7 +258,7 @@ func (a *App) createTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.hub.Publish(Event{"created", t.ID, t.Code, t.Title, t.Status, t.Priority})
-	writeJSON(w, 201, t)
+	writeJSON(w, 201, anonymize(t))
 }
 
 func (a *App) listTickets(w http.ResponseWriter, r *http.Request) {
@@ -269,7 +269,7 @@ func (a *App) listTickets(w http.ResponseWriter, r *http.Request) {
 	if !u.IsStaff() || q.Get("scope") == "mine" {
 		f.ReporterID = u.ID
 	}
-	writeJSON(w, 200, a.store.ListTickets(f))
+	writeJSON(w, 200, anonymizeAll(a.store.ListTickets(f)))
 }
 
 func (a *App) ticketID(w http.ResponseWriter, r *http.Request) (int, bool) {
@@ -292,7 +292,7 @@ func (a *App) getTicket(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "arıza bulunamadı")
 		return
 	}
-	writeJSON(w, 200, t)
+	writeJSON(w, 200, anonymize(t))
 }
 
 func (a *App) updateTicket(w http.ResponseWriter, r *http.Request) {
@@ -326,7 +326,7 @@ func (a *App) updateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.hub.Publish(Event{"updated", t.ID, t.Code, t.Title, t.Status, t.Priority})
-	writeJSON(w, 200, t)
+	writeJSON(w, 200, anonymize(t))
 }
 
 func (a *App) stats(w http.ResponseWriter, r *http.Request) {

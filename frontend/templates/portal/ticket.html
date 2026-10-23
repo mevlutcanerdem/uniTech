@@ -1,59 +1,66 @@
 {% extends "base.html" %}
-{% load portal_tags %}
+{% load portal_tags portal_icons %}
 {% block title %}{{ t.code }}{% endblock %}
-{% block main_class %}narrow{% endblock %}
 {% block content %}
-<div class="head">
-  <span class="eyebrow">{{ t.code }}</span>
-  <h1>{{ t.title }}</h1>
-</div>
-<article class="ticket st-{{ t.status }}">
-  <div class="t-top">
-    <span class="code">{{ t.category|category_label }}</span>
-    <span class="pill">{{ t.status|status_label }}</span>
-  </div>
-  <p class="t-desc">{{ t.description }}</p>
-  <div class="t-meta">
-    <span>Konum: {{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</span>
-    <span {% if t.priority == 'acil' %}class="urgent"{% endif %}>Aciliyet: {{ t.priority|priority_label }}</span>
-    <span>{{ t.created_at|date:"j F Y H:i" }}</span>
-    {% if is_staff %}<span>{{ t.reporter_name }} · {{ t.reporter_email }}</span>{% endif %}
-  </div>
-</article>
-
-{% if is_staff %}
-<form class="card stack" method="post" action="{% url 'ticket_update' t.id %}">
-  {% csrf_token %}
-  <h2>Durumu güncelle</h2>
-  <fieldset>
-    <legend>Durum</legend>
-    <div class="chips three">
-      {% for key, label in statuses.items %}
-      <label class="chip"><input type="radio" name="status" value="{{ key }}" {% if t.status == key %}checked{% endif %}><span>{{ label }}</span></label>
-      {% endfor %}
+<a class="back" href="{% if is_staff %}{% url 'panel' %}{% else %}{% url 'mine' %}{% endif %}">{% icon "arrow-left" 16 %}Listeye dön</a>
+<div class="page-head">
+  <div style="display:flex;gap:16px;align-items:center">
+    <span class="tile cc-{{ t.category }}" style="width:52px;height:52px;border-radius:14px">{% icon t.category 26 %}</span>
+    <div>
+      <span class="code">{{ t.code }} · {{ t.category|category_label }}</span>
+      <h1>{{ t.title }}</h1>
     </div>
-  </fieldset>
-  <label for="note">Öğrenciye not <small>İsteğe bağlı, öğrenci bu notu görür</small>
-    <input id="note" name="note" maxlength="500" placeholder="Teknisyen yolda, 30 dk içinde orada.">
-  </label>
-  <button class="btn primary" type="submit">Kaydet</button>
-</form>
-{% endif %}
+  </div>
+  <span class="pill st-{{ t.status }}" style="font-size:13px;padding:6px 14px">{{ t.status|status_label }}</span>
+</div>
 
-<section class="card" style="display:flex;flex-direction:column;gap:14px">
-  <h2>Geçmiş</h2>
-  <ol class="timeline">
-    {% for h in t.history reversed %}
-    <li>
-      <time datetime="{{ h.at|date:'c' }}">{{ h.at|date:"j M H:i" }}</time>
-      <div>
-        {% if h.status %}<strong>{{ h.status|status_label }}</strong>{% endif %}
-        {% if h.note %}{% if h.status %} · {% endif %}{{ h.note }}{% endif %}
-        <div class="hint">{{ h.by_name }}</div>
+<div class="detail">
+  <div class="detail-main">
+    <section class="card">
+      <h2>Açıklama</h2>
+      <p class="desc">{{ t.description }}</p>
+    </section>
+
+    {% if is_staff %}
+    <form class="card stack" method="post" action="{% url 'ticket_update' t.id %}">
+      {% csrf_token %}
+      <div><h2>Durumu güncelle</h2><p class="card-sub">Öğrenci yaptığın değişikliği ve notunu kendi sayfasında görür.</p></div>
+      <div class="segs">
+        {% for key, label in statuses.items %}
+        <label class="seg {% if key == 'yeni' %}sc-acil{% elif key == 'islemde' %}sc-orta{% else %}sc-dusuk{% endif %}"><input type="radio" name="status" value="{{ key }}" {% if t.status == key %}checked{% endif %}><span>{{ label }}</span></label>
+        {% endfor %}
       </div>
-    </li>
-    {% endfor %}
-  </ol>
-</section>
-<p><a href="{% if is_staff %}{% url 'panel' %}{% else %}{% url 'mine' %}{% endif %}">← Listeye dön</a></p>
+      <label for="note">Öğrenciye not <small>İsteğe bağlı</small>
+        <input id="note" name="note" maxlength="500" placeholder="Örn. Teknisyen yolda, 30 dakika içinde orada.">
+      </label>
+      <button class="btn primary" type="submit">Kaydet</button>
+    </form>
+    {% endif %}
+
+    <section class="card">
+      <h2>Geçmiş</h2>
+      <ol class="timeline">
+        {% for h in t.history reversed %}
+        <li>
+          <span class="dot {% if h.status %}st-{{ h.status }}{% endif %}">{% if h.status == 'cozuldu' %}{% icon "check" 14 %}{% elif h.status %}{% icon "clock" 14 %}{% else %}{% icon "message" 14 %}{% endif %}</span>
+          <div>
+            <div>{% if h.status %}<strong>{{ h.status|status_label }}</strong>{% endif %}{% if h.note %}{% if h.status %} · {% endif %}{{ h.note }}{% endif %}</div>
+            <div class="tl-time"><time datetime="{{ h.at|date:'c' }}">{{ h.at|date:"j F Y, H:i" }}</time> · {{ h.by_name }}</div>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <aside class="card">
+    <dl class="facts">
+      <div><dt>Konum</dt><dd>{{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</dd></div>
+      <div><dt>Aciliyet</dt><dd><span class="prio prio-{{ t.priority }}">{{ t.priority|priority_label }}</span></dd></div>
+      <div><dt>Bildirilme</dt><dd>{{ t.created_at|date:"j F Y, H:i" }}</dd></div>
+      <div><dt>Son güncelleme</dt><dd>{{ t.updated_at|timesince }} önce</dd></div>
+      {% if is_staff %}<div><dt>Bildiren</dt><dd>{{ t.reporter_name }}<br><span class="hint">{{ t.reporter_email }}</span></dd></div>{% endif %}
+    </dl>
+  </aside>
+</div>
 {% endblock %}

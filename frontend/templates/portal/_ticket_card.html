@@ -1,16 +1,19 @@
-{% load portal_tags %}
-<li class="ticket st-{{ t.status }}" id="t-{{ t.id }}">
-  <div class="t-top">
-    <span class="code">{{ t.code }} · {{ t.category|category_label }}</span>
-    <span class="pill">{{ t.status|status_label }}</span>
-  </div>
-  <a class="t-title" href="{% url 'ticket' t.id %}">{{ t.title }}</a>
-  {% if show_desc %}<p class="t-desc">{{ t.description|truncatechars:240 }}</p>{% endif %}
-  <div class="t-meta">
-    <span>Konum: {{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</span>
-    <span {% if t.priority == 'acil' %}class="urgent"{% endif %}>Aciliyet: {{ t.priority|priority_label }}</span>
-    <span title="{{ t.created_at|date:'j F Y H:i' }}">{{ t.created_at|timesince }} önce</span>
-    {% if manage %}<span>{{ t.reporter_name }} · {{ t.reporter_email }}</span>{% endif %}
+{% load portal_tags portal_icons %}
+<li class="ticket st-{{ t.status }}{% if t.priority == 'acil' and t.status != 'cozuldu' %} urgent-open{% endif %}" id="t-{{ t.id }}">
+  <span class="tile cc-{{ t.category }}">{% icon t.category 22 %}</span>
+  <div class="t-body">
+    <div class="t-top">
+      <a class="t-title" href="{% url 'ticket' t.id %}">{{ t.title }}</a>
+      <span class="pill">{{ t.status|status_label }}</span>
+    </div>
+    {% if show_desc %}<p class="t-desc">{{ t.description|truncatechars:220 }}</p>{% endif %}
+    <div class="t-meta">
+      <span class="code">{{ t.code }}</span>
+      <span>{% icon "pin" 15 %}{{ t.building }}{% if t.room %} · {{ t.room }}{% endif %}</span>
+      <span class="prio prio-{{ t.priority }}{% if t.priority == 'acil' %} urgent{% endif %}">{{ t.priority|priority_label }}</span>
+      <span title="{{ t.created_at|date:'j F Y H:i' }}">{% icon "clock" 15 %}{{ t.created_at|timesince }} önce</span>
+      {% if manage %}<span>{% icon "user" 15 %}{{ t.reporter_name }}</span>{% endif %}
+    </div>
   </div>
   {% if manage %}
   <div class="t-actions">
@@ -18,10 +21,10 @@
     <form method="post" action="{% url 'ticket_update' t.id %}">
       {% csrf_token %}<input type="hidden" name="next" value="{{ return_to|default:request.get_full_path }}">
       <input type="hidden" name="status" value="{{ key }}">
-      <button class="btn small" type="submit" aria-pressed="{% if t.status == key %}true{% else %}false{% endif %}">{{ label }}</button>
+      <button class="btn small st st-{{ key }}" type="submit" aria-pressed="{% if t.status == key %}true{% else %}false{% endif %}">{{ label }}</button>
     </form>
     {% endfor %}
-    <form method="post" action="{% url 'ticket_update' t.id %}" style="display:flex;flex:1;gap:6px;min-width:200px">
+    <form class="note" method="post" action="{% url 'ticket_update' t.id %}">
       {% csrf_token %}<input type="hidden" name="next" value="{{ return_to|default:request.get_full_path }}">
       <input type="text" name="note" maxlength="500" placeholder="Öğrenciye not yaz" aria-label="Not">
       <button class="btn small" type="submit">Not ekle</button>

@@ -126,3 +126,29 @@ func TestTicketFlow(t *testing.T) {
 }
 
 func itoa(i int) string { b, _ := json.Marshal(i); return string(b) }
+
+func TestMask(t *testing.T) {
+	if got := maskName("Mevlüt Can Erdem"); got != "M*** C*** E***" {
+		t.Errorf("maskName: %q", got)
+	}
+	if got := maskName("şule  özgür"); got != "Ş*** Ö***" {
+		t.Errorf("maskName türkçe: %q", got)
+	}
+	if got := maskEmail("mevlut.erdem@agu.edu.tr"); got != "m***.e***@agu.edu.tr" {
+		t.Errorf("maskEmail: %q", got)
+	}
+}
+
+func TestTicketsAreAnonymous(t *testing.T) {
+	srv := newTestApp(t)
+	stu := register(t, srv, "mevlut.erdem@agu.edu.tr")
+	adm := register(t, srv, "admin@agu.edu.tr")
+	var tk Ticket
+	call(t, srv, "POST", "/api/tickets", stu.Token, map[string]string{
+		"category": "diger", "building": "Ambar", "room": "", "title": "X", "description": "Y", "priority": "orta"}, &tk)
+	var list []Ticket
+	call(t, srv, "GET", "/api/tickets", adm.Token, nil, &list)
+	if len(list) != 1 || list[0].ReporterName != "T*** K***" || list[0].ReporterEmail != "m***.e***@agu.edu.tr" || list[0].History[0].ByName != "T*** K***" {
+		t.Fatalf("ekip tam adı gördü: %+v", list)
+	}
+}

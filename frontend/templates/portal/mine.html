@@ -1,17 +1,20 @@
 {% extends "base.html" %}
+{% load portal_icons %}
 {% block title %}Bildirimlerim{% endblock %}
-{% block main_class %}narrow{% endblock %}
+{% block page_class %}narrow{% endblock %}
 {% block content %}
-<div class="head">
-  <span class="eyebrow">Takip</span>
-  <h1>Bildirimlerim</h1>
-  <p class="lede">Gönderdiğin arızalar ve teknik ekibin güncel durumu.</p>
+<div class="page-head">
+  <div>
+    <h1>Bildirimlerim</h1>
+    <p>Gönderdiğin arızalar ve teknik ekibin güncel durumu.</p>
+  </div>
+  <a class="btn primary" href="{% url 'report' %}">{% icon "plus" 18 %}Yeni bildirim</a>
 </div>
 <ul class="list">
   {% for t in tickets %}
     {% include "portal/_ticket_card.html" with t=t show_desc=True %}
   {% empty %}
-    <li class="empty"><strong>Henüz bir bildirimin yok</strong>Bir arıza gördüğünde <a href="{% url 'report' %}">buradan bildir</a>; durumu bu sayfada görünür.</li>
+    <li class="empty"><span class="tile cc-bilgisayar">{% icon "inbox" 26 %}</span><strong>Henüz bir bildirimin yok</strong>Bir arıza gördüğünde <a href="{% url 'report' %}">buradan bildir</a>; durumu bu sayfada görünür.</li>
   {% endfor %}
 </ul>
 {% endblock %}

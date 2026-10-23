@@ -1,31 +1,37 @@
 {% extends "base.html" %}
+{% load portal_icons %}
 {% block title %}Kayıt ol{% endblock %}
-{% block content %}
-<div class="authbox">
-  <div class="head">
-    <span class="eyebrow">Abdullah Gül Üniversitesi</span>
-    <h1>Hesap oluştur</h1>
-    <p class="lede">Sadece @agu.edu.tr uzantılı okul e-postasıyla kayıt olunabilir.</p>
-  </div>
-  <form class="card stack" method="post" novalidate>
-    {% csrf_token %}
-    <label for="name">Ad soyad
-      <input id="name" name="name" autocomplete="name" value="{{ name }}" maxlength="80" required>
-    </label>
-    <label for="email">Okul e-postası
-      <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required>
-    </label>
-    <div class="row">
-      <label for="password">Şifre <small>En az 8 karakter</small>
-        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
-      </label>
-      <label for="password2">Şifre tekrar
-        <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="8" required>
-      </label>
+{% block body %}
+<main class="auth">
+  {% include "auth/_brand.html" %}
+  <section class="auth-form">
+    <div class="auth-card">
+      {% include "_messages.html" %}
+      <div>
+        <h2>Hesap oluştur</h2>
+        <p class="card-sub">Sadece @agu.edu.tr uzantılı okul e-postasıyla kayıt olunabilir.</p>
+      </div>
+      <form class="stack" method="post" novalidate>
+        {% csrf_token %}
+        <label for="name">Ad soyad
+          <span class="field-icon">{% icon "user" 18 %}<input id="name" name="name" autocomplete="name" value="{{ name }}" maxlength="80" required></span>
+        </label>
+        <label for="email">Okul e-postası
+          <span class="field-icon">{% icon "message" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
+        </label>
+        <div class="row">
+          <label for="password">Şifre <small>En az 8 karakter</small>
+            <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+          <label for="password2">Şifre tekrar <small>&nbsp;</small>
+            <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+        </div>
+        {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+        <button class="btn primary" type="submit">Kayıt ol</button>
+      </form>
+      <p class="center">Zaten hesabın var mı? <a href="{% url 'login' %}">Giriş yap</a></p>
     </div>
-    {% if error %}<p class="err">{{ error }}</p>{% endif %}
-    <button class="btn primary" type="submit">Kayıt ol</button>
-  </form>
-  <p class="center">Zaten hesabın var mı? <a href="{% url 'login' %}">Giriş yap</a></p>
-</div>
+  </section>
+</main>
 {% endblock %}

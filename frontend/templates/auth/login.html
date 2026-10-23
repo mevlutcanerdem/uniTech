@@ -1,24 +1,30 @@
 {% extends "base.html" %}
+{% load portal_icons %}
 {% block title %}Giriş{% endblock %}
-{% block content %}
-<div class="authbox">
-  <div class="head">
-    <span class="eyebrow">Abdullah Gül Üniversitesi</span>
-    <h1>Kampüsteki arızaları tek yerden bildir</h1>
-    <p class="lede">Okul e-postanla giriş yap. Bildirimin doğrudan teknik ekibe gider.</p>
-  </div>
-  <form class="card stack" method="post" novalidate>
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    <label for="email">Okul e-postası
-      <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required>
-    </label>
-    <label for="password">Şifre
-      <input id="password" name="password" type="password" autocomplete="current-password" required>
-    </label>
-    {% if error %}<p class="err">{{ error }}</p>{% endif %}
-    <button class="btn primary" type="submit">Giriş yap</button>
-  </form>
-  <p class="center">Hesabın yok mu? <a href="{% url 'register' %}">Okul e-postanla kayıt ol</a></p>
-</div>
+{% block body %}
+<main class="auth">
+  {% include "auth/_brand.html" %}
+  <section class="auth-form">
+    <div class="auth-card">
+      {% include "_messages.html" %}
+      <div>
+        <h2>Tekrar hoş geldin</h2>
+        <p class="card-sub">Okul e-postanla giriş yap.</p>
+      </div>
+      <form class="stack" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <label for="email">Okul e-postası
+          <span class="field-icon">{% icon "user" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
+        </label>
+        <label for="password">Şifre
+          <span class="field-icon">{% icon "shield" 18 %}<input id="password" name="password" type="password" autocomplete="current-password" required></span>
+        </label>
+        {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+        <button class="btn primary" type="submit">Giriş yap</button>
+      </form>
+      <p class="center">Hesabın yok mu? <a href="{% url 'register' %}">Okul e-postanla kayıt ol</a></p>
+    </div>
+  </section>
+</main>
 {% endblock %}

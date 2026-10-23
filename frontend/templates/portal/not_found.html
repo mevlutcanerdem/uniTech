@@ -1,6 +1,7 @@
 {% extends "base.html" %}
+{% load portal_icons %}
 {% block title %}Bulunamadı{% endblock %}
-{% block main_class %}narrow{% endblock %}
+{% block page_class %}narrow{% endblock %}
 {% block content %}
-<div class="empty"><strong>Bu arıza bulunamadı</strong>Silinmiş olabilir ya da görüntüleme yetkin yok. <a href="{% url 'mine' %}">Bildirimlerime dön</a></div>
+<div class="empty"><span class="tile cc-diger">{% icon "search" 26 %}</span><strong>Bu arıza bulunamadı</strong>Silinmiş olabilir ya da görüntüleme yetkin yok. <a href="{% url 'mine' %}">Bildirimlerime dön</a></div>
 {% endblock %}

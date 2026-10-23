@@ -1,0 +1,1 @@
+{% load portal_icons %}{% for m in messages %}<div class="flash {{ m.tags }}" role="status">{% if m.tags == 'success' %}{% icon "check" 20 %}{% elif m.tags == 'error' %}{% icon "alert" 20 %}{% else %}{% icon "bell" 20 %}{% endif %}<span>{{ m }}</span></div>{% endfor %}

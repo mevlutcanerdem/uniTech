@@ -1,49 +1,60 @@
 {% extends "base.html" %}
+{% load portal_icons %}
 {% block title %}Arıza bildir{% endblock %}
-{% block main_class %}narrow{% endblock %}
-{% block content %}
-<div class="head">
-  <span class="eyebrow">Yeni bildirim</span>
-  <h1>Kampüste bir arıza mı gördün?</h1>
-  <p class="lede">Formu doldur, bildirimin teknik ekibin paneline anında düşsün. Durumunu “Bildirimlerim” sayfasından takip edebilirsin.</p>
-</div>
-<form class="card stack" method="post" novalidate>
-  {% csrf_token %}
-  <fieldset>
-    <legend>Arıza türü</legend>
-    <div class="chips">
-      {% for key, label in categories.items %}
-      <label class="chip"><input type="radio" name="category" value="{{ key }}" {% if form.category == key or not form.category and forloop.first %}checked{% endif %}><span>{{ label }}</span></label>
-      {% endfor %}
+{% block body %}
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Kampüste bir arıza mı gördün?</h1>
+    <p>Formu doldur, bildirimin teknik ekibin paneline anında düşsün.</p>
+    <div class="hero-steps">
+      <span><i>1</i>Türü ve yeri seç</span>
+      <span><i>2</i>Kısaca anlat</span>
+      <span><i>3</i>Durumunu takip et</span>
     </div>
-  </fieldset>
-  <div class="row">
-    <label for="building">Bina
-      <select id="building" name="building" required>
-        <option value="">Seç…</option>
-        {% for b in buildings %}<option {% if form.building == b %}selected{% endif %}>{{ b }}</option>{% endfor %}
-      </select>
-    </label>
-    <label for="room">Kat / oda <small>İsteğe bağlı</small>
-      <input id="room" name="room" maxlength="60" value="{{ form.room }}" placeholder="2. kat, B-204">
-    </label>
   </div>
-  <label for="title">Kısa başlık
-    <input id="title" name="title" maxlength="100" value="{{ form.title }}" placeholder="Projeksiyon görüntü vermiyor" required>
-  </label>
-  <label for="description">Açıklama <small>Ne oldu, ne zamandır böyle?</small>
-    <textarea id="description" name="description" maxlength="2000" required placeholder="Cihaz açılıyor ama görüntü gelmiyor. Kabloyu değiştirdik, olmadı.">{{ form.description }}</textarea>
-  </label>
-  <fieldset>
-    <legend>Aciliyet</legend>
-    <div class="chips three">
-      {% for key, label in priorities.items %}
-      <label class="chip"><input type="radio" name="priority" value="{{ key }}" {% if form.priority == key %}checked{% endif %}><span>{{ label }}{% if key == 'acil' %} · güvenlik riski{% endif %}</span></label>
-      {% endfor %}
+</section>
+<main class="page narrow lift">
+  {% include "_messages.html" %}
+  <form class="card elevated stack" method="post" novalidate>
+    {% csrf_token %}
+    <fieldset>
+      <legend>Arıza türü</legend>
+      <div class="cats">
+        {% for key, label in categories.items %}
+        <label class="cat"><input type="radio" name="category" value="{{ key }}" {% if form.category == key or not form.category and forloop.first %}checked{% endif %}>
+          <span class="cat-box cc-{{ key }}"><span class="tile cc-{{ key }}">{% icon key 22 %}</span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="row">
+      <label for="building">Bina
+        <select id="building" name="building" required>
+          <option value="">Bina seç</option>
+          {% for b in buildings %}<option {% if form.building == b %}selected{% endif %}>{{ b }}</option>{% endfor %}
+        </select>
+      </label>
+      <label for="room">Kat / oda <small>İsteğe bağlı</small>
+        <input id="room" name="room" maxlength="60" value="{{ form.room }}" placeholder="Örn. 2. kat, B-204">
+      </label>
     </div>
-  </fieldset>
-  {% if error %}<p class="err">{{ error }}</p>{% endif %}
-  <button class="btn primary" type="submit">Teknik ekibe gönder</button>
-</form>
-<p class="foot">Yangın, su baskını veya elektrik kaçağı gibi acil durumlarda bildirimin yanında kampüs güvenliğini de ara.</p>
+    <label for="title">Kısa başlık
+      <input id="title" name="title" maxlength="100" value="{{ form.title }}" placeholder="Örn. Projeksiyon görüntü vermiyor" required>
+    </label>
+    <label for="description">Açıklama <small>Ne oldu, ne zamandır böyle?</small>
+      <textarea id="description" name="description" maxlength="2000" required placeholder="Cihaz açılıyor ama görüntü gelmiyor. Kabloyu değiştirdik, sonuç aynı.">{{ form.description }}</textarea>
+    </label>
+    <fieldset>
+      <legend>Aciliyet</legend>
+      <div class="segs">
+        <label class="seg sc-dusuk"><input type="radio" name="priority" value="dusuk" {% if form.priority == 'dusuk' %}checked{% endif %}><span>Düşük <small>Bekleyebilir</small></span></label>
+        <label class="seg sc-orta"><input type="radio" name="priority" value="orta" {% if form.priority == 'orta' %}checked{% endif %}><span>Orta <small>Bugün</small></span></label>
+        <label class="seg sc-acil"><input type="radio" name="priority" value="acil" {% if form.priority == 'acil' %}checked{% endif %}><span>Acil <small>Güvenlik riski</small></span></label>
+      </div>
+    </fieldset>
+    {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+    <button class="btn primary" type="submit">{% icon "send" 18 %}Teknik ekibe gönder</button>
+  </form>
+  <p class="foot">{% icon "alert" 16 %}Yangın, su baskını veya elektrik kaçağında bildirimin yanında kampüs güvenliğini de ara.</p>
+</main>
 {% endblock %}

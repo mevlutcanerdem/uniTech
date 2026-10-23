@@ -23,3 +23,8 @@ def status_label(v):
 @register.filter
 def role_label(v):
     return ROLES.get(v, v)
+
+
+@register.filter
+def split(v):
+    return str(v).split()
