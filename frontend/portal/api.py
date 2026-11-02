@@ -4,16 +4,18 @@ from datetime import datetime
 import requests
 from django.conf import settings
 
-from .i18n import tr, translate_api_error
+from .i18n import tr, translate_api_error  # noqa: F401  (translate_api_error views'da da kullanılır)
 
-TIMEOUT = 10
+TIMEOUT = 15
+_session = requests.Session()  # bağlantıları yeniden kullanır
 
 
 class ApiError(Exception):
-    def __init__(self, status, message):
+    def __init__(self, status, message, code=""):
         super().__init__(message)
         self.status = status
         self.message = message
+        self.code = code
 
 
 class NeedLogin(ApiError):
@@ -42,28 +44,62 @@ def _sentence(msg):
     return msg[:1].upper() + msg[1:] + ("" if msg.endswith(".") else ".")
 
 
-def call(request, method, path, json=None, params=None, auth=True):
+def client_ip(request):
+    """Render'ın eklediği X-Forwarded-For'un ilk değeri, yoksa doğrudan bağlantı adresi."""
+    fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return fwd.split(",")[0].strip() if fwd else request.META.get("REMOTE_ADDR", "")
+
+
+def _headers(request, auth):
     lang = getattr(request, "LANG", "tr")
-    headers = {"Accept-Language": lang}
+    h = {"Accept-Language": lang}
+    if settings.INTERNAL_API_KEY:
+        # API hız sınırlarını sunucunun değil gerçek öğrencinin adresine uygulasın.
+        h["X-Internal-Key"] = settings.INTERNAL_API_KEY
+        h["X-Client-IP"] = client_ip(request)
     if auth:
         token = request.session.get("token")
         if not token:
             raise NeedLogin(401, tr(lang, "Devam etmek için giriş yap."))
-        headers["Authorization"] = f"Bearer {token}"
+        h["Authorization"] = f"Bearer {token}"
+    return h
+
+
+def _send(request, method, path, auth, timeout=TIMEOUT, **kw):
+    headers = _headers(request, auth)
     try:
-        res = requests.request(
-            method, settings.API_URL + path, json=json, params=params, headers=headers, timeout=TIMEOUT
-        )
+        return _session.request(method, settings.API_URL + path, headers=headers, timeout=timeout, **kw)
     except requests.RequestException:
-        raise ApiError(503, tr(lang, "Sunucuya ulaşılamıyor. Biraz sonra tekrar dene."))
+        raise ApiError(503, tr(getattr(request, "LANG", "tr"), "Sunucuya ulaşılamıyor. Biraz sonra tekrar dene."), "unavailable")
+
+
+def _raise_for(request, res, auth):
+    lang = getattr(request, "LANG", "tr")
     try:
         data = res.json()
     except ValueError:
         data = {}
     err = data.get("error") if isinstance(data, dict) else None
+    code = data.get("code", "") if isinstance(data, dict) else ""
     if res.status_code == 401 and auth:
         request.session.flush()
-        raise NeedLogin(401, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Oturumun kapandı, tekrar giriş yap."))
+        raise NeedLogin(401, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Oturumun kapandı, tekrar giriş yap."), code)
+    raise ApiError(res.status_code, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Bir hata oluştu."), code)
+
+
+def call(request, method, path, json=None, params=None, files=None, auth=True, timeout=TIMEOUT):
+    res = _send(request, method, path, auth, timeout=timeout, json=json, params=params, files=files)
     if res.status_code >= 400:
-        raise ApiError(res.status_code, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Bir hata oluştu."))
-    return _parse_dates(data)
+        _raise_for(request, res, auth)
+    try:
+        return _parse_dates(res.json())
+    except ValueError:
+        return {}
+
+
+def fetch_raw(request, path):
+    """Fotoğraf gibi ikili içerik: (bytes, content_type)."""
+    res = _send(request, "GET", path, True)
+    if res.status_code >= 400:
+        _raise_for(request, res, True)
+    return res.content, res.headers.get("Content-Type", "application/octet-stream")

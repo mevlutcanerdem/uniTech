@@ -1,6 +1,8 @@
 # uniTech
 
-**Demo:** https://mevlutcanerdem.github.io/uniTech/ (örnek verilerle, giriş gerektirmez)
+**Canlı:** https://unitech-web.onrender.com · **Ekip girişi:** https://unitech-web.onrender.com/ekip/giris/ · **Demo (örnek verili):** https://unitech-agu.onrender.com
+
+![CI](https://github.com/mevlutcanerdem/uniTech/actions/workflows/ci.yml/badge.svg)
 
 Abdullah Gül Üniversitesi için arıza bildirim sistemi. Öğrenciler kampüste gördükleri arızaları
 (elektrik, projeksiyon, Wi‑Fi, tesisat, klima…) siteye girer. Bildirim teknik ekibin paneline
@@ -8,7 +10,9 @@ Abdullah Gül Üniversitesi için arıza bildirim sistemi. Öğrenciler kampüst
 
 ## Özellikler
 
-- **Sadece okul e-postası:** Kayıt yalnızca `@agu.edu.tr` adresleriyle yapılabilir.
+- **Sadece okul e-postası:** Kayıt yalnızca `@agu.edu.tr` adresleriyle yapılabilir. E-posta göndericisi tanımlıysa adrese 6 haneli doğrulama kodu gider; doğrulanmadan arıza bildirilemez.
+- **Şifre sıfırlama:** “Şifremi unuttum” ile e-postaya kod gelir; şifre değişince diğer cihazlardaki oturumlar kapanır.
+- **Fotoğraf:** Arızaya en fazla 3 fotoğraf eklenebilir. Sunucu fotoğrafı küçültür, telefonun döndürme bilgisini uygular ve konum gibi EXIF verilerini siler.
 - **Arıza bildirme:** Tür, bina, kat/oda, açıklama ve aciliyet seçilir. Her bildirime takip numarası verilir (`AGU-2026-00042`).
 - **Bildirimlerim:** Öğrenci kendi arızalarının durumunu (Yeni → İşlemde → Çözüldü) ve ekibin notlarını görür.
 - **Teknik ekip paneli:** Yeni arızalar sayfa yenilenmeden gelir (Server-Sent Events). Acil olanlar en üstte durur. Duruma, türe göre filtre ve arama vardır.
@@ -23,18 +27,19 @@ Abdullah Gül Üniversitesi için arıza bildirim sistemi. Öğrenciler kampüst
 ## Mimari
 
 ```
-Tarayıcı ──► Django (frontend, :8000) ──► Go API (backend, :8080) ──► data/unitech.json
+Tarayıcı ──► Django (frontend, :8000) ──► Go API (backend, :8080) ──► PostgreSQL
    │                                            ▲
    └──────────── canlı panel akışı (SSE) ───────┘
 ```
 
 | Klasör | Ne yapar |
 |---|---|
-| `backend/` | Go API. Kimlik doğrulama, arızalar, roller, canlı akış. Sadece Go standart kütüphanesini kullanır, dış bağımlılık yoktur. |
-| `frontend/` | Django arayüzü. Sayfaları çizer, verileri Go API'den alır. Kendi veritabanı yoktur, oturum imzalı çerezde tutulur. |
+| `backend/` | Go 1.27 API. Kimlik doğrulama, e-posta kodları, arızalar, fotoğraflar, roller, raporlar, canlı akış, hız sınırları. Tek dış bağımlılık PostgreSQL sürücüsü (pgx). |
+| `backend/migrations/` | Veritabanı şeması. API açılışta eksik migration'ları sırayla uygular. |
+| `frontend/` | Django 6.1 arayüzü. Sayfaları çizer, verileri Go API'den alır. Kendi veritabanı yoktur, oturum imzalı çerezde tutulur. İçerik Güvenliği Politikası (CSP) açıktır. |
 
-Veriler `backend` tarafında tek bir JSON dosyasında tutulur (yazmalar kilitli ve atomik). Bir kampüs için
-yeterlidir. Kullanıcı sayısı çok büyürse `backend/store.go` içindeki aynı metotlar PostgreSQL ile yeniden yazılabilir.
+`DATABASE_URL` tanımlıysa veriler PostgreSQL tablolarında, değilse (geliştirme için) yerel bir dosyada tutulur.
+Önceki sürümün tek satırlık JSON deposu varsa API ilk açılışta onu yeni tablolara taşır.
 
 ## Hızlı başlangıç (Docker)
 
@@ -82,23 +87,30 @@ python manage.py runserver
 
 | Yöntem | Yol | Kim |
 |---|---|---|
-| `POST` | `/api/auth/register`, `/api/auth/login` | Herkes |
+| `GET` | `/api/health`, `/api/meta`, `/api/public/stats` | Herkes |
+| `POST` | `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot`, `/api/auth/reset` | Herkes |
+| `POST` | `/api/auth/verify` `{code}`, `/api/auth/verify/resend` | Giriş yapan |
 | `GET` | `/api/me` | Giriş yapan |
-| `POST` | `/api/tickets` | Giriş yapan |
-| `GET` | `/api/tickets?status=&category=&q=&scope=mine` | Öğrenci kendi arızalarını, ekip tümünü görür |
-| `GET` | `/api/tickets/{id}` | Sahibi veya ekip |
-| `PATCH` | `/api/tickets/{id}` `{status, note}` | Teknik ekip |
-| `GET` | `/api/stats`, `/api/events` (SSE) | Teknik ekip |
+| `POST` | `/api/tickets`, `/api/tickets/{id}/photos` (multipart `photo`) | Doğrulanmış kullanıcı |
+| `GET` | `/api/tickets?status=&category=&assignee=me\|none&q=&scope=mine` | Öğrenci kendi arızalarını, ekip tümünü görür |
+| `GET` | `/api/tickets/{id}`, `/api/photos/{id}` | Sahibi veya ekip |
+| `PATCH` | `/api/tickets/{id}` `{status, note, assign}` | Teknik ekip |
+| `GET` | `/api/stats`, `/api/reports?days=14\|30`, `/api/events` (SSE) | Teknik ekip |
 | `GET` / `PATCH` | `/api/users`, `/api/users/{id}` `{role}` | Yönetici |
+
+Hatalar `{"error": "...", "code": "..."}` biçiminde döner; hız sınırına takılan isteklerde `Retry-After` başlığı vardır.
 
 ## Testler
 
 ```bash
-cd backend && go test ./...
+cd backend && go test ./...                                   # bellek deposu
+TEST_DATABASE_URL=postgres://... go test -p 1 ./...           # + PostgreSQL
+cd frontend && python check_i18n.py                           # eksik İngilizce metin
 ```
+
+GitHub Actions her gönderimde bu testleri, `manage.py check --deploy`'u ve iki Docker derlemesini çalıştırır.
 
 ## Sonraki adımlar
 
-- **E-posta doğrulama:** Şu an `@agu.edu.tr` adresi kontrol ediliyor ama adresin gerçekten kişiye ait olduğu doğrulanmıyor. Okulun SMTP bilgisi alınınca kayıtta doğrulama kodu gönderilmeli.
-- Arızaya fotoğraf ekleme.
+- **E-posta göndericisini aç:** Render'da API servisine `BREVO_API_KEY` ve `MAIL_FROM` (veya okulun `SMTP_*` bilgileri) ekle; doğrulama ve şifre sıfırlama kendiliğinden devreye girer.
 - Bina listesini (`frontend/portal/constants.py`) okulun güncel listesiyle güncelleme.

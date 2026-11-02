@@ -53,3 +53,20 @@ def pct(v, total):
         return round(100 * float(v) / float(total)) if float(total) else 0
     except (TypeError, ValueError):
         return 0
+
+
+@register.filter
+def duration(hours, lang="tr"):
+    """Saat cinsinden süreyi okunur hale getirir: '1 saatten az', '5,3 sa', '2,1 gün'."""
+    try:
+        h = float(hours)
+    except (TypeError, ValueError):
+        return ""
+    if h <= 0:
+        return ""
+    sep = "," if lang == "tr" else "."
+    if h < 1:
+        return tr(lang, "1 saatten az")
+    if h < 48:
+        return tr(lang, "{n} sa", n=f"{h:.1f}".replace(".", sep))
+    return tr(lang, "{n} gün", n=f"{h / 24:.1f}".replace(".", sep))

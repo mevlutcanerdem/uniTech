@@ -15,7 +15,7 @@
 </section>
 <main class="page narrow lift">
   {% include "_messages.html" %}
-  <form class="card elevated stack" method="post" novalidate>
+  <form class="card elevated stack" method="post" enctype="multipart/form-data" novalidate data-lock>
     {% csrf_token %}
     <fieldset>
       <legend>{% t "Arıza türü" %}</legend>
@@ -52,6 +52,16 @@
         <label class="seg sc-acil"><input type="radio" name="priority" value="acil" {% if form.priority == 'acil' %}checked{% endif %}><span>{% t "Acil" %} <small>{% t "Güvenlik riski" %}</small></span></label>
       </div>
     </fieldset>
+    <div class="field">
+      <span class="field-label">{% t "Fotoğraf" %} <small>{% t "İsteğe bağlı" %} · {% t "En fazla 3 fotoğraf, JPEG veya PNG" %}</small></span>
+      <label class="dropzone" for="photos">
+        {% icon "camera" 22 %}<span>{% t "Fotoğraf ekle" %}</span>
+        <input id="photos" name="photos" type="file" accept="image/jpeg,image/png" multiple data-photo-input data-max="3" data-preview="photo-preview" data-error="photo-error"
+          data-msg-count="{% t 'En fazla 3 fotoğraf seçebilirsin.' %}" data-msg-size="{% t 'Fotoğraf çok büyük (en fazla 8 MB).' %}" data-msg-type="{% t 'Sadece JPEG veya PNG fotoğraf yüklenebilir.' %}">
+      </label>
+      <div class="thumbs" id="photo-preview"></div>
+      <p class="err" id="photo-error" hidden></p>
+    </div>
     {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
     <button class="btn primary" type="submit">{% icon "send" 18 %}{% t "Teknik ekibe gönder" %}</button>
   </form>

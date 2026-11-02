@@ -21,13 +21,13 @@
         <h2>{% t "Tekrar hoş geldin" %}</h2>
         <p class="card-sub">{% t "Ekip hesabınla giriş yap." %}</p>
       </div>
-      <form class="stack" method="post" novalidate>
+      <form class="stack" method="post" novalidate data-lock>
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next }}">
         <label for="email">{% t "E-posta" %}
           <span class="field-icon">{% icon "user" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
         </label>
-        <label for="password">{% t "Şifre" %}
+        <label for="password"><span class="label-row">{% t "Şifre" %}<a href="{% url 'forgot' %}" class="small-link">{% t "Şifremi unuttum" %}</a></span>
           <span class="field-icon">{% icon "shield" 18 %}<input id="password" name="password" type="password" autocomplete="current-password" required></span>
         </label>
         {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}

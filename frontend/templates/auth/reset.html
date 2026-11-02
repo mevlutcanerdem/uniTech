@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Yeni şifre belirle" %}{% endblock %}
+{% block body %}
+<main class="auth">
+  {% include "auth/_brand.html" %}
+  <section class="auth-form">
+    <div class="auth-card">
+      {% include "_messages.html" %}
+      <div>
+        <h2>{% t "Yeni şifre belirle" %}</h2>
+        <p class="card-sub">{% t "E-postana gelen kodu ve yeni şifreni yaz." %}</p>
+      </div>
+      <form class="stack" method="post" novalidate data-lock>
+        {% csrf_token %}
+        <label for="email">{% t "Okul e-postası" %}
+          <span class="field-icon">{% icon "message" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required></span>
+        </label>
+        <label for="code">{% t "Sıfırlama kodu" %}
+          <input id="code" name="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required data-code>
+        </label>
+        <div class="row">
+          <label for="password">{% t "Yeni şifre" %} <small>{% t "En az 8 karakter" %}</small>
+            <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+          <label for="password2">{% t "Şifre tekrar" %} <small>&nbsp;</small>
+            <input id="password2" name="password2" type="password" autocomplete="new-password" minlength="8" required>
+          </label>
+        </div>
+        {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+        <button class="btn primary" type="submit">{% t "Şifreyi değiştir" %}</button>
+      </form>
+      <p class="center switch"><a href="{% url 'forgot' %}">{% t "Kod gelmedi mi?" %} {% t "Yeni kod gönder" %}</a></p>
+    </div>
+  </section>
+</main>
+{% endblock %}

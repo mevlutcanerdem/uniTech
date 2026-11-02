@@ -12,9 +12,14 @@ import (
 type Hub struct {
 	mu   sync.Mutex
 	subs map[chan []byte]struct{}
+	done chan struct{}
+	once sync.Once
 }
 
-func NewHub() *Hub { return &Hub{subs: map[chan []byte]struct{}{}} }
+func NewHub() *Hub { return &Hub{subs: map[chan []byte]struct{}{}, done: make(chan struct{})} }
+
+// CloseAll sunucu kapanırken açık akışları sonlandırır.
+func (h *Hub) CloseAll() { h.once.Do(func() { close(h.done) }) }
 
 type Event struct {
 	Type     string `json:"type"` // "created" | "updated"
@@ -72,6 +77,8 @@ func (h *Hub) ServeSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-r.Context().Done():
+			return
+		case <-h.done:
 			return
 		case b := <-ch:
 			fmt.Fprintf(w, "event: ticket\ndata: %s\n\n", b)

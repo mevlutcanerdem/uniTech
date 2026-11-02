@@ -6,6 +6,13 @@
   <div class="cat-strip" aria-hidden="true">
     {% for k in "elektrik bilgisayar internet tesisat iklim kapi temizlik"|split %}<span class="tile cc-{{ k }}">{% icon k 18 %}</span>{% endfor %}
   </div>
+  {% if pub and pub.resolved %}
+  <div class="pub-stats">
+    <div><b>{{ pub.resolved }}</b><span>{% t "arıza çözüldü" %}</span></div>
+    <div><b>{{ pub.open }}</b><span>{% t "şu an açık" %}</span></div>
+    {% if pub.avg_resolve_hours %}<div><b>{{ pub.avg_resolve_hours|duration:LANG }}</b><span>{% t "ortalama çözüm" %}</span></div>{% endif %}
+  </div>
+  {% endif %}
   <ul class="features">
     <li><span class="tile">{% icon "send" 20 %}</span><div><b>{% t "Saniyeler içinde bildir" %}</b><span>{% t "Arıza türünü, yerini ve aciliyetini seç, gönder." %}</span></div></li>
     <li><span class="tile">{% icon "bell" 20 %}</span><div><b>{% t "Ekip anında görür" %}</b><span>{% t "Bildirimin teknik ekibin paneline canlı olarak düşer." %}</span></div></li>

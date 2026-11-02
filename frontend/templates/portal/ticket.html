@@ -21,8 +21,29 @@
       <p class="desc">{{ t.description }}</p>
     </section>
 
+    <section class="card">
+      <div class="card-head"><h2>{% t "Fotoğraflar" %}</h2><span class="hint">{{ t.photos|length }} / 3</span></div>
+      {% if t.photos %}
+      <div class="gallery">
+        {% for p in t.photos %}<a href="{% url 'photo' p.id %}" target="_blank" rel="noopener"><img src="{% url 'photo' p.id %}" width="{{ p.width }}" height="{{ p.height }}" alt="{% t 'Arızanın fotoğrafı' %} {{ forloop.counter }}" loading="lazy"></a>{% endfor %}
+      </div>
+      {% else %}<p class="hint">{% t "Bu arızaya fotoğraf eklenmemiş." %}</p>{% endif %}
+      {% if can_add_photo %}
+      <form class="photo-add" method="post" action="{% url 'ticket_photo' t.id %}" enctype="multipart/form-data" data-lock>
+        {% csrf_token %}
+        <label class="dropzone small" for="photos">{% icon "camera" 18 %}<span>{% t "Fotoğraf seç" %}</span>
+          <input id="photos" name="photos" type="file" accept="image/jpeg,image/png" data-photo-input data-max="1" data-preview="photo-preview" data-error="photo-error"
+            data-msg-count="{% t 'En fazla 3 fotoğraf seçebilirsin.' %}" data-msg-size="{% t 'Fotoğraf çok büyük (en fazla 8 MB).' %}" data-msg-type="{% t 'Sadece JPEG veya PNG fotoğraf yüklenebilir.' %}">
+        </label>
+        <div class="thumbs" id="photo-preview"></div>
+        <button class="btn small" type="submit">{% icon "send" 15 %}{% t "Fotoğraf yükle" %}</button>
+        <p class="err" id="photo-error" hidden></p>
+      </form>
+      {% endif %}
+    </section>
+
     {% if is_staff %}
-    <form class="card stack" method="post" action="{% url 'ticket_update' t.id %}">
+    <form class="card stack" method="post" action="{% url 'ticket_update' t.id %}" data-lock>
       {% csrf_token %}
       <div><h2>{% t "Durumu güncelle" %}</h2><p class="card-sub">{% t "Öğrenci yaptığın değişikliği ve notunu kendi sayfasında görür." %}</p></div>
       <div class="segs">
@@ -42,12 +63,13 @@
       <ol class="timeline">
         {% for h in t.history reversed %}
         <li>
-          <span class="dot {% if h.status %}st-{{ h.status }}{% endif %}">{% if h.status == 'cozuldu' %}{% icon "check" 14 %}{% elif h.action == 'assigned' or h.action == 'unassigned' %}{% icon "user" 14 %}{% elif h.status %}{% icon "clock" 14 %}{% else %}{% icon "message" 14 %}{% endif %}</span>
+          <span class="dot {% if h.status %}st-{{ h.status }}{% endif %}">{% if h.status == 'cozuldu' %}{% icon "check" 14 %}{% elif h.action == 'assigned' or h.action == 'unassigned' %}{% icon "user" 14 %}{% elif h.action == 'photo' %}{% icon "camera" 14 %}{% elif h.status %}{% icon "clock" 14 %}{% else %}{% icon "message" 14 %}{% endif %}</span>
           <div>
             <div>
               {% if h.action == 'created' %}<strong>{% t "Arıza bildirildi" %}</strong>
               {% elif h.action == 'assigned' %}<strong>{% t "Arızayı üzerine aldı" %}</strong>
               {% elif h.action == 'unassigned' %}<strong>{% t "Arızayı bıraktı" %}</strong>
+              {% elif h.action == 'photo' %}<strong>{% t "Fotoğraf eklendi." %}</strong>
               {% elif h.status %}<strong>{{ h.status|status_label:LANG }}</strong>{% endif %}
               {% if h.note and h.note != 'Arıza bildirildi' %}{% if h.status or h.action %} · {% endif %}{{ h.note }}{% elif h.note %}<strong>{% t "Arıza bildirildi" %}</strong>{% endif %}
             </div>

@@ -11,6 +11,7 @@
       <span class="code">{{ t.code }}</span>
       <span>{% icon "pin" 15 %}{{ t.building|building_label:LANG }}{% if t.room %} · {{ t.room }}{% endif %}</span>
       <span class="prio prio-{{ t.priority }}{% if t.priority == 'acil' %} urgent{% endif %}">{{ t.priority|priority_label:LANG }}</span>
+      {% if t.photo_count %}<span>{% icon "camera" 15 %}{{ t.photo_count }}</span>{% endif %}
       <span title="{{ t.created_at|date:'j F Y H:i' }}">{% icon "clock" 15 %}{% t "{x} önce" x=t.created_at|timesince %}</span>
       {% if manage %}<span>{% icon "user" 15 %}{{ t.reporter_name }}</span>{% endif %}
     </div>

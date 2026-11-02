@@ -14,12 +14,12 @@
 </nav>
 <form class="toolbar" method="get" id="filters">
   {% if filters.assignee %}<input type="hidden" name="assignee" value="{{ filters.assignee }}">{% endif %}
-  <select name="status" aria-label="{% t 'Duruma göre' %}" onchange="this.form.submit()">
+  <select name="status" aria-label="{% t 'Duruma göre' %}" data-autosubmit>
     <option value="acik" {% if filters.status == 'acik' %}selected{% endif %}>{% t "Açık olanlar" %}</option>
     {% for key, label in statuses.items %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ key|status_label:LANG }}</option>{% endfor %}
     <option value="hepsi" {% if filters.status == 'hepsi' %}selected{% endif %}>{% t "Hepsi" %}</option>
   </select>
-  <select name="category" aria-label="{% t 'Türe göre' %}" onchange="this.form.submit()">
+  <select name="category" aria-label="{% t 'Türe göre' %}" data-autosubmit>
     <option value="">{% t "Tüm türler" %}</option>
     {% for key, label in categories.items %}<option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ key|category_label:LANG }}</option>{% endfor %}
   </select>
@@ -31,7 +31,7 @@
 <div class="toast" id="toast" role="status" hidden>{% icon "bell" 18 %}<span id="toast-text"></span></div>
 {% endblock %}
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
   window.UNITECH = {
     streamUrl: "{{ API_PUBLIC_URL|escapejs }}/api/events?token={{ stream_token|urlencode|escapejs }}",
     listUrl: "{% url 'panel_list' %}",

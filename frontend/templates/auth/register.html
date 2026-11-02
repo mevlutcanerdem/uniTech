@@ -11,7 +11,7 @@
         <h2>{% t "Hesap oluştur" %}</h2>
         <p class="card-sub">{% t "Sadece @agu.edu.tr uzantılı okul e-postasıyla kayıt olunabilir." %}</p>
       </div>
-      <form class="stack" method="post" novalidate>
+      <form class="stack" method="post" novalidate data-lock>
         {% csrf_token %}
         <label for="name">{% t "Ad soyad" %}
           <span class="field-icon">{% icon "user" 18 %}<input id="name" name="name" autocomplete="name" value="{{ name }}" maxlength="80" required></span>

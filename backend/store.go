@@ -1,345 +1,143 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
+	"context"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
-// Roller
-const (
-	RoleStudent = "student"
-	RoleStaff   = "staff"
-	RoleAdmin   = "admin"
-)
+// Store, uygulamanın tüm kalıcı verisine erişim arayüzü.
+// Sunucuda PGStore (PostgreSQL), yerel geliştirme ve testlerde MemStore kullanılır.
+type Store interface {
+	Kind() string
+	Close()
 
-// Arıza durumları
-const (
-	StatusNew      = "yeni"
-	StatusProgress = "islemde"
-	StatusDone     = "cozuldu"
-)
+	CreateUser(ctx context.Context, u User) (User, error)
+	UserByEmail(ctx context.Context, email string) (User, error)
+	UserByID(ctx context.Context, id int) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
+	SetRole(ctx context.Context, id int, role string) (User, error)
+	SetVerified(ctx context.Context, id int) error
+	// SetPassword şifreyi değiştirir ve eski oturumları geçersiz kılar.
+	SetPassword(ctx context.Context, id int, hash string) (User, error)
 
-var (
-	Categories = map[string]string{
-		"elektrik":   "Elektrik",
-		"bilgisayar": "Bilgisayar / Projeksiyon",
-		"internet":   "İnternet / Wi-Fi",
-		"tesisat":    "Su / Tesisat",
-		"iklim":      "Isıtma / Klima",
-		"kapi":       "Kapı / Mobilya",
-		"temizlik":   "Temizlik",
-		"diger":      "Diğer",
+	SaveCode(ctx context.Context, c AuthCode) error
+	GetCode(ctx context.Context, userID int, purpose string) (AuthCode, error)
+	IncCodeAttempts(ctx context.Context, userID int, purpose string) error
+	DeleteCode(ctx context.Context, userID int, purpose string) error
+
+	CreateTicket(ctx context.Context, t Ticket) (Ticket, error)
+	// TicketByID geçmiş ve fotoğraf listesiyle birlikte döner.
+	TicketByID(ctx context.Context, id int) (Ticket, error)
+	// ListTickets geçmiş olmadan döner.
+	ListTickets(ctx context.Context, f TicketFilter) ([]Ticket, error)
+	// UpdateTicket durumu, notu ve atamayı günceller. assign: "" (değiştirme), "me" veya "none".
+	UpdateTicket(ctx context.Context, id int, by User, status, note, assign string) (Ticket, error)
+	Stats(ctx context.Context) (Stats, error)
+	// AllTickets raporlar için geçmişsiz tüm arızalar.
+	AllTickets(ctx context.Context) ([]Ticket, error)
+
+	AddPhoto(ctx context.Context, p Photo, by User) (PhotoRef, error)
+	Photo(ctx context.Context, id int) (Photo, error)
+}
+
+// applyUpdate, iki depo uygulamasının paylaştığı güncelleme kuralı.
+// Ticket'ı yerinde değiştirir ve eklenecek geçmiş kayıtlarını döner (boşsa değişiklik yok).
+func applyUpdate(t *Ticket, by User, status, note, assign string, now time.Time) []HistoryEntry {
+	var add []HistoryEntry
+	entry := func(e HistoryEntry) { e.At, e.ByID, e.ByName = now, by.ID, by.Name; add = append(add, e) }
+
+	// İşleme alınan ve kimsede olmayan arıza otomatik olarak işlemi yapana atanır.
+	if status == StatusProgress && t.AssigneeID == 0 && assign == "" {
+		assign = "me"
 	}
-	Priorities = map[string]string{"dusuk": "Düşük", "orta": "Orta", "acil": "Acil"}
-	Statuses   = map[string]string{StatusNew: "Yeni", StatusProgress: "İşlemde", StatusDone: "Çözüldü"}
-	Roles      = map[string]bool{RoleStudent: true, RoleStaff: true, RoleAdmin: true}
-)
-
-// ticketCode öğrenciye verilen takip numarası: AGU-2026-00042
-func ticketCode(year, id int) string { return fmt.Sprintf("AGU-%d-%05d", year, id) }
-
-var ErrNotFound = errors.New("bulunamadı")
-var ErrEmailTaken = errors.New("bu e-posta ile zaten bir hesap var")
-
-type User struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	PassHash  string    `json:"pass_hash,omitempty"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-// Public, şifre özeti olmadan.
-func (u User) Public() User { u.PassHash = ""; return u }
-
-func (u User) IsStaff() bool { return u.Role == RoleStaff || u.Role == RoleAdmin }
-
-type HistoryEntry struct {
-	At     time.Time `json:"at"`
-	ByID   int       `json:"by_id"`
-	ByName string    `json:"by_name"`
-	Status string    `json:"status,omitempty"`
-	Note   string    `json:"note,omitempty"`
-	// Action sistem olayları için: "created", "assigned", "unassigned".
-	Action string `json:"action,omitempty"`
-}
-
-type Ticket struct {
-	ID            int            `json:"id"`
-	Code          string         `json:"code"`
-	Category      string         `json:"category"`
-	Building      string         `json:"building"`
-	Room          string         `json:"room"`
-	Title         string         `json:"title"`
-	Description   string         `json:"description"`
-	Priority      string         `json:"priority"`
-	Status        string         `json:"status"`
-	ReporterID    int            `json:"reporter_id"`
-	ReporterName  string         `json:"reporter_name"`
-	ReporterEmail string         `json:"reporter_email"`
-	AssigneeID    int            `json:"assignee_id,omitempty"`
-	AssigneeName  string         `json:"assignee_name,omitempty"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	ResolvedAt    *time.Time     `json:"resolved_at,omitempty"`
-	History       []HistoryEntry `json:"history"`
-}
-
-type data struct {
-	NextUserID   int      `json:"next_user_id"`
-	NextTicketID int      `json:"next_ticket_id"`
-	Users        []User   `json:"users"`
-	Tickets      []Ticket `json:"tickets"`
-}
-
-// Store tüm veriyi bellekte tutar ve her değişiklikte persister'a yazar
-// (yerelde JSON dosyası, sunucuda PostgreSQL). Bir kampüs için yeterlidir.
-type Store struct {
-	mu sync.RWMutex
-	p  persister
-	d  data
-}
-
-func OpenStore(p persister) (*Store, error) {
-	s := &Store{p: p, d: data{NextUserID: 1, NextTicketID: 1}}
-	b, err := p.Load()
-	if err != nil {
-		return nil, err
-	}
-	if b == nil {
-		return s, s.saveLocked()
-	}
-	if err := json.Unmarshal(b, &s.d); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// saveLocked yazma kilidi alınmışken çağrılır.
-func (s *Store) saveLocked() error {
-	b, err := json.Marshal(s.d)
-	if err != nil {
-		return err
-	}
-	return s.p.Save(b)
-}
-
-// ---- Kullanıcılar ----
-
-func (s *Store) CreateUser(name, email, passHash, role string) (User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, u := range s.d.Users {
-		if u.Email == email {
-			return User{}, ErrEmailTaken
+	switch assign {
+	case "me":
+		if t.AssigneeID != by.ID {
+			t.AssigneeID, t.AssigneeName = by.ID, by.Name
+			entry(HistoryEntry{Action: "assigned"})
+		}
+	case "none":
+		if t.AssigneeID != 0 {
+			t.AssigneeID, t.AssigneeName = 0, ""
+			entry(HistoryEntry{Action: "unassigned"})
 		}
 	}
-	u := User{ID: s.d.NextUserID, Name: name, Email: email, PassHash: passHash, Role: role, CreatedAt: time.Now().UTC()}
-	s.d.NextUserID++
-	s.d.Users = append(s.d.Users, u)
-	return u, s.saveLocked()
-}
-
-func (s *Store) UserByEmail(email string) (User, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, u := range s.d.Users {
-		if u.Email == email {
-			return u, nil
+	if status != "" && status != t.Status {
+		t.Status = status
+		if status == StatusDone {
+			at := now
+			t.ResolvedAt = &at
+		} else {
+			t.ResolvedAt = nil
 		}
+		entry(HistoryEntry{Status: status, Note: note})
+		note = ""
 	}
-	return User{}, ErrNotFound
-}
-
-func (s *Store) UserByID(id int) (User, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, u := range s.d.Users {
-		if u.ID == id {
-			return u, nil
-		}
+	if note != "" {
+		entry(HistoryEntry{Note: note})
 	}
-	return User{}, ErrNotFound
-}
-
-func (s *Store) ListUsers() []User {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	out := make([]User, 0, len(s.d.Users))
-	for _, u := range s.d.Users {
-		out = append(out, u.Public())
-	}
-	return out
-}
-
-func (s *Store) SetRole(id int, role string) (User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.d.Users {
-		if s.d.Users[i].ID == id {
-			s.d.Users[i].Role = role
-			return s.d.Users[i].Public(), s.saveLocked()
-		}
-	}
-	return User{}, ErrNotFound
-}
-
-// ---- Arızalar ----
-
-func (s *Store) CreateTicket(t Ticket) (Ticket, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	now := time.Now().UTC()
-	t.ID = s.d.NextTicketID
-	s.d.NextTicketID++
-	t.Code = ticketCode(now.Year(), t.ID)
-	t.Status = StatusNew
-	t.CreatedAt, t.UpdatedAt = now, now
-	t.History = []HistoryEntry{{At: now, ByID: t.ReporterID, ByName: t.ReporterName, Status: StatusNew, Action: "created"}}
-	s.d.Tickets = append(s.d.Tickets, t)
-	return t, s.saveLocked()
-}
-
-func (s *Store) TicketByID(id int) (Ticket, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, t := range s.d.Tickets {
-		if t.ID == id {
-			return t, nil
-		}
-	}
-	return Ticket{}, ErrNotFound
-}
-
-type TicketFilter struct {
-	ReporterID int    // 0 = hepsi
-	Status     string // "", "acik" veya durum kodu
-	Category   string
-	Query      string
-	AssigneeID int  // 0 = hepsi
-	Unassigned bool // sadece kimsenin üstlenmedikleri
-}
-
-var priorityRank = map[string]int{"acil": 0, "orta": 1, "dusuk": 2}
-
-func (s *Store) ListTickets(f TicketFilter) []Ticket {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	q := strings.ToLower(strings.TrimSpace(f.Query))
-	out := []Ticket{}
-	for _, t := range s.d.Tickets {
-		if f.ReporterID != 0 && t.ReporterID != f.ReporterID {
-			continue
-		}
-		switch f.Status {
-		case "", "hepsi":
-		case "acik":
-			if t.Status == StatusDone {
-				continue
-			}
-		default:
-			if t.Status != f.Status {
-				continue
-			}
-		}
-		if f.Category != "" && t.Category != f.Category {
-			continue
-		}
-		if f.AssigneeID != 0 && t.AssigneeID != f.AssigneeID {
-			continue
-		}
-		if f.Unassigned && t.AssigneeID != 0 {
-			continue
-		}
-		if q != "" && !strings.Contains(strings.ToLower(t.Title+" "+t.Description+" "+t.Building+" "+t.Room+" "+t.Code), q) {
-			continue
-		}
-		out = append(out, t)
-	}
-	// Açıklar önce, sonra aciliyet, sonra en yeni.
-	sort.SliceStable(out, func(i, j int) bool {
-		a, b := out[i], out[j]
-		if (a.Status == StatusDone) != (b.Status == StatusDone) {
-			return b.Status == StatusDone
-		}
-		if f.ReporterID == 0 && priorityRank[a.Priority] != priorityRank[b.Priority] {
-			return priorityRank[a.Priority] < priorityRank[b.Priority]
-		}
-		return a.CreatedAt.After(b.CreatedAt)
-	})
-	return out
-}
-
-// UpdateTicket durumu, notu ve atamayı günceller. assign: "" (değiştirme), "me" veya "none".
-func (s *Store) UpdateTicket(id int, by User, status, note, assign string) (Ticket, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.d.Tickets {
-		t := &s.d.Tickets[i]
-		if t.ID != id {
-			continue
-		}
-		now := time.Now().UTC()
-		var add []HistoryEntry
-		entry := func(e HistoryEntry) { e.At, e.ByID, e.ByName = now, by.ID, by.Name; add = append(add, e) }
-
-		// İşleme alınan ve kimsede olmayan arıza otomatik olarak işlemi yapana atanır.
-		if status == StatusProgress && t.AssigneeID == 0 && assign == "" {
-			assign = "me"
-		}
-		switch assign {
-		case "me":
-			if t.AssigneeID != by.ID {
-				t.AssigneeID, t.AssigneeName = by.ID, by.Name
-				entry(HistoryEntry{Action: "assigned"})
-			}
-		case "none":
-			if t.AssigneeID != 0 {
-				t.AssigneeID, t.AssigneeName = 0, ""
-				entry(HistoryEntry{Action: "unassigned"})
-			}
-		}
-		if status != "" && status != t.Status {
-			t.Status = status
-			if status == StatusDone {
-				t.ResolvedAt = &now
-			} else {
-				t.ResolvedAt = nil
-			}
-			entry(HistoryEntry{Status: status, Note: note})
-			note = ""
-		}
-		if note != "" {
-			entry(HistoryEntry{Note: note})
-		}
-		if len(add) == 0 {
-			return *t, nil
-		}
+	if len(add) > 0 {
 		t.UpdatedAt = now
-		t.History = append(t.History, add...)
-		return *t, s.saveLocked()
 	}
-	return Ticket{}, ErrNotFound
+	return add
 }
 
-type Stats struct {
-	New      int `json:"yeni"`
-	Progress int `json:"islemde"`
-	Done     int `json:"cozuldu"`
-	Urgent   int `json:"acil_acik"`
+// ticketLess liste sıralaması: açıklar önce, (ekip görünümünde) aciliyet, sonra en yeni.
+func ticketLess(a, b Ticket, byPriority bool) bool {
+	if (a.Status == StatusDone) != (b.Status == StatusDone) {
+		return b.Status == StatusDone
+	}
+	if byPriority && priorityRank[a.Priority] != priorityRank[b.Priority] {
+		return priorityRank[a.Priority] < priorityRank[b.Priority]
+	}
+	if !a.CreatedAt.Equal(b.CreatedAt) {
+		return a.CreatedAt.After(b.CreatedAt)
+	}
+	return a.ID > b.ID
 }
 
-func (s *Store) Stats() Stats {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func sortTickets(ts []Ticket, byPriority bool) {
+	sort.SliceStable(ts, func(i, j int) bool { return ticketLess(ts[i], ts[j], byPriority) })
+}
+
+func matchesFilter(t Ticket, f TicketFilter) bool {
+	if f.ReporterID != 0 && t.ReporterID != f.ReporterID {
+		return false
+	}
+	switch f.Status {
+	case "", "hepsi":
+	case "acik":
+		if t.Status == StatusDone {
+			return false
+		}
+	default:
+		if t.Status != f.Status {
+			return false
+		}
+	}
+	if f.Category != "" && t.Category != f.Category {
+		return false
+	}
+	if f.AssigneeID != 0 && t.AssigneeID != f.AssigneeID {
+		return false
+	}
+	if f.Unassigned && t.AssigneeID != 0 {
+		return false
+	}
+	if q := strings.ToLower(strings.TrimSpace(f.Query)); q != "" {
+		hay := strings.ToLower(t.Title + " " + t.Description + " " + t.Building + " " + t.Room + " " + t.Code)
+		if !strings.Contains(hay, q) {
+			return false
+		}
+	}
+	return true
+}
+
+func statsOf(ts []Ticket) Stats {
 	var st Stats
-	for _, t := range s.d.Tickets {
+	for _, t := range ts {
 		switch t.Status {
 		case StatusNew:
 			st.New++

@@ -7,19 +7,24 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/mail"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 const (
+	// Ücretsiz sunucunun düşük işlemci payında girişin birkaç saniye sürmemesi için 210 bin.
+	// Özet içinde tur sayısı saklandığından ileride artırılabilir; eski özetler çalışmaya devam eder.
 	pbkdf2Iter = 210_000
 	tokenTTL   = 7 * 24 * time.Hour
+	codeTTL    = 15 * time.Minute
+	maxCodeTry = 5
 	// Sadece bu alan adındaki e-postalar kayıt olabilir.
 	AllowedDomain = "agu.edu.tr"
 )
@@ -46,7 +51,7 @@ func CheckPassword(hash, pw string) bool {
 		return false
 	}
 	iter, err := strconv.Atoi(parts[1])
-	if err != nil {
+	if err != nil || iter < 1 {
 		return false
 	}
 	salt, err1 := b64.DecodeString(parts[2])
@@ -60,6 +65,9 @@ func CheckPassword(hash, pw string) bool {
 	}
 	return subtle.ConstantTimeCompare(got, want) == 1
 }
+
+// dummyHash, var olmayan e-postalarla girişte de aynı sürede yanıt vermek için kullanılır.
+var dummyHash, _ = HashPassword("zamanlama-saldirisina-karsi")
 
 // ---- E-posta ----
 
@@ -81,85 +89,73 @@ func NormalizeEmail(raw string) (string, error) {
 
 type claims struct {
 	UID int   `json:"uid"`
+	Ver int   `json:"ver"` // şifre değişince artar; eski oturumları geçersiz kılar
 	Exp int64 `json:"exp"`
 }
 
 type Tokens struct{ secret []byte }
 
-func (t Tokens) Issue(uid int) (string, error) {
-	p, err := json.Marshal(claims{UID: uid, Exp: time.Now().Add(tokenTTL).Unix()})
+var ErrBadToken = errors.New("geçersiz oturum")
+
+func (t Tokens) Issue(u User) (string, error) {
+	p, err := json.Marshal(claims{UID: u.ID, Ver: u.TokenVersion, Exp: time.Now().Add(tokenTTL).Unix()})
 	if err != nil {
 		return "", err
 	}
 	body := b64.EncodeToString(p)
-	return body + "." + b64.EncodeToString(t.sign(body)), nil
+	return body + "." + b64.EncodeToString(t.mac("token", body)), nil
 }
 
-func (t Tokens) Verify(tok string) (int, error) {
+// Verify (kullanıcı id, token sürümü) döner.
+func (t Tokens) Verify(tok string) (int, int, error) {
 	body, sig, ok := strings.Cut(tok, ".")
 	if !ok {
-		return 0, errors.New("geçersiz oturum")
+		return 0, 0, ErrBadToken
 	}
 	got, err := b64.DecodeString(sig)
-	if err != nil || !hmac.Equal(got, t.sign(body)) {
-		return 0, errors.New("geçersiz oturum")
+	if err != nil || !hmac.Equal(got, t.mac("token", body)) {
+		return 0, 0, ErrBadToken
 	}
 	raw, err := b64.DecodeString(body)
 	if err != nil {
-		return 0, errors.New("geçersiz oturum")
+		return 0, 0, ErrBadToken
 	}
 	var c claims
 	if json.Unmarshal(raw, &c) != nil || c.UID == 0 {
-		return 0, errors.New("geçersiz oturum")
+		return 0, 0, ErrBadToken
 	}
 	if time.Now().Unix() > c.Exp {
-		return 0, errors.New("oturumun süresi doldu, tekrar giriş yap")
+		return 0, 0, errors.New("oturumun süresi doldu, tekrar giriş yap")
 	}
-	return c.UID, nil
+	return c.UID, c.Ver, nil
 }
 
-func (t Tokens) sign(body string) []byte {
+func (t Tokens) mac(scope, body string) []byte {
 	m := hmac.New(sha256.New, t.secret)
-	m.Write([]byte(body))
+	m.Write([]byte(scope + "\x00" + body))
 	return m.Sum(nil)
 }
 
-// ---- Giriş denemesi sınırı ----
+// ---- Tek kullanımlık kodlar ----
 
-// loginLimiter aynı e-posta için 15 dakikada en fazla 10 hatalı denemeye izin verir.
-type loginLimiter struct {
-	mu   sync.Mutex
-	fail map[string][]time.Time
-}
-
-func newLoginLimiter() *loginLimiter { return &loginLimiter{fail: map[string][]time.Time{}} }
-
-func (l *loginLimiter) recent(key string) []time.Time {
-	cut := time.Now().Add(-15 * time.Minute)
-	keep := l.fail[key][:0]
-	for _, t := range l.fail[key] {
-		if t.After(cut) {
-			keep = append(keep, t)
-		}
+// NewCode 6 haneli rastgele bir kod üretir.
+func NewCode() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
+	if err != nil {
+		return "", err
 	}
-	l.fail[key] = keep
-	return keep
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
-func (l *loginLimiter) Blocked(key string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return len(l.recent(key)) >= 10
+// HashCode kodu düz metin saklamamak için kullanıcı ve amaca bağlı olarak özetler.
+func (t Tokens) HashCode(userID int, purpose, code string) string {
+	return hex.EncodeToString(t.mac("code", fmt.Sprintf("%d:%s:%s", userID, purpose, code)))
 }
 
-func (l *loginLimiter) Fail(key string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.fail[key] = append(l.recent(key), time.Now())
-}
-
-func (l *loginLimiter) Reset(key string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	delete(l.fail, key)
+func (t Tokens) CheckCode(c AuthCode, code string, now time.Time) bool {
+	if now.After(c.ExpiresAt) || c.Attempts >= maxCodeTry {
+		return false
+	}
+	want := t.HashCode(c.UserID, c.Purpose, strings.TrimSpace(code))
+	return subtle.ConstantTimeCompare([]byte(want), []byte(c.CodeHash)) == 1
 }

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load portal_icons portal_tags %}
+{% block title %}{% t "Şifremi unuttum" %}{% endblock %}
+{% block body %}
+<main class="auth">
+  {% include "auth/_brand.html" %}
+  <section class="auth-form">
+    <div class="auth-card">
+      {% include "_messages.html" %}
+      <div>
+        <h2>{% t "Şifreni sıfırla" %}</h2>
+        <p class="card-sub">{% t "Okul e-postanı yaz, sana bir sıfırlama kodu gönderelim." %}</p>
+      </div>
+      <form class="stack" method="post" novalidate data-lock>
+        {% csrf_token %}
+        <label for="email">{% t "Okul e-postası" %}
+          <span class="field-icon">{% icon "message" 18 %}<input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" placeholder="ad.soyad@agu.edu.tr" required autofocus></span>
+        </label>
+        {% if error %}<p class="err">{% icon "alert" 18 %}{{ error }}</p>{% endif %}
+        <button class="btn primary" type="submit">{% t "Kod gönder" %}</button>
+      </form>
+      <p class="center switch"><a href="{% url 'login' %}">{% icon "arrow-left" 14 %} {% t "Girişe dön" %}</a></p>
+    </div>
+  </section>
+</main>
+{% endblock %}

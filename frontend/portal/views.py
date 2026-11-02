@@ -2,7 +2,7 @@ from functools import wraps
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -11,8 +11,12 @@ from django.views.decorators.http import require_POST
 from . import api
 from .constants import BUILDINGS, CATEGORIES, PRIORITIES, ROLES, STATUSES
 from .i18n import COOKIE, LANGS, tr
+from .templatetags.portal_tags import duration
 
 STAFF_ROLES = ("staff", "admin")
+MAX_PHOTOS = 3
+MAX_PHOTO_BYTES = 8 * 1024 * 1024
+PHOTO_TYPES = ("image/jpeg", "image/png")
 
 
 # ---- yardımcılar ----
@@ -23,7 +27,7 @@ def _(request, text, **kw):
 
 def _session_user(u):
     """Çereze sadece gerekli alanları yaz."""
-    return {k: u.get(k) for k in ("id", "name", "email", "role")}
+    return {k: u.get(k) for k in ("id", "name", "email", "role", "verified")}
 
 
 def _login_redirect(request, staff=False):
@@ -31,8 +35,8 @@ def _login_redirect(request, staff=False):
     return redirect(f"{target}?{urlencode({'next': request.get_full_path()})}")
 
 
-def _requires(roles=None, login_view_staff=False):
-    """Oturum ve rol kontrolü; rol değişikliklerini yakalamak için kullanıcıyı her istekte tazeler."""
+def _requires(roles=None, login_view_staff=False, need_verified=False):
+    """Oturum, rol ve e-posta doğrulama kontrolü; rol değişikliklerini yakalamak için kullanıcıyı her istekte tazeler."""
 
     def deco(view):
         @wraps(view)
@@ -46,10 +50,13 @@ def _requires(roles=None, login_view_staff=False):
                 return _login_redirect(request, login_view_staff)
             except api.ApiError as e:
                 return render(request, "portal/_error_page.html", {"message": e.message}, status=503)
-            role = request.session["user"]["role"]
-            if roles and role not in roles:
+            user = request.session["user"]
+            if roles and user["role"] not in roles:
                 msg = "Bu sayfa sadece yöneticiler içindir." if roles == ("admin",) else "Bu sayfa sadece teknik ekip içindir."
                 return HttpResponseForbidden(_(request, msg))
+            if (need_verified or roles) and not user.get("verified", True):
+                messages.info(request, _(request, "Arıza bildirmeden önce e-posta adresini doğrulaman gerekiyor."))
+                return redirect(f"{reverse('verify')}?{urlencode({'next': request.get_full_path()})}")
             return view(request, *args, **kwargs)
 
         return wrapper
@@ -58,6 +65,7 @@ def _requires(roles=None, login_view_staff=False):
 
 
 login_required = _requires()
+verified_required = _requires(need_verified=True)
 staff_required = _requires(STAFF_ROLES, login_view_staff=True)
 admin_required = _requires(("admin",), login_view_staff=True)
 
@@ -76,7 +84,17 @@ def _start_session(request, resp):
 
 
 def _home_for(user):
+    if not user.get("verified", True):
+        return "verify"
     return "panel" if user.get("role") in STAFF_ROLES else "report"
+
+
+def _public_stats(request):
+    """Giriş sayfasındaki sayılar. API uykudaysa sayfayı bekletmez, sayıları göstermez."""
+    try:
+        return api.call(request, "GET", "/api/public/stats", auth=False, timeout=3)
+    except api.ApiError:
+        return None
 
 
 # ---- dil ----
@@ -111,6 +129,8 @@ def _login(request, template, staff_only):
                 return redirect(_safe_next(request, reverse(_home_for(resp["user"]))))
         except api.ApiError as e:
             ctx["error"] = e.message
+    if not staff_only:
+        ctx["pub"] = _public_stats(request)
     return render(request, template, ctx)
 
 
@@ -133,11 +153,70 @@ def register_view(request):
                 resp = api.call(request, "POST", "/api/auth/register", auth=False,
                                 json={"name": ctx["name"], "email": ctx["email"], "password": request.POST.get("password", "")})
                 _start_session(request, resp)
+                if resp.get("verification_required"):
+                    if not resp.get("code_sent"):
+                        messages.error(request, _(request, "Kod şu an gönderilemedi. Biraz sonra “Yeni kod gönder”e bas."))
+                    return redirect("verify")
                 messages.success(request, _(request, "Hoş geldin, {name}! Hesabın oluşturuldu.", name=resp["user"]["name"]))
                 return redirect(_home_for(resp["user"]))
             except api.ApiError as e:
                 ctx["error"] = e.message
     return render(request, "auth/register.html", ctx)
+
+
+@login_required
+def verify(request):
+    user = request.session["user"]
+    if user.get("verified"):
+        return redirect(_safe_next(request, reverse(_home_for(user))))
+    ctx = {"next": request.GET.get("next", "")}
+    if request.method == "POST":
+        try:
+            if "resend" in request.POST:
+                r = api.call(request, "POST", "/api/auth/verify/resend", json={})
+                if r.get("sent"):
+                    messages.success(request, _(request, "Yeni kod gönderildi."))
+                return redirect(request.get_full_path())
+            u = api.call(request, "POST", "/api/auth/verify", json={"code": request.POST.get("code", "").strip()})
+            request.session["user"] = _session_user(u)
+            messages.success(request, _(request, "E-postan doğrulandı. Artık arıza bildirebilirsin."))
+            return redirect(_safe_next(request, reverse(_home_for(u))))
+        except api.ApiError as e:
+            ctx["error"] = e.message
+    return render(request, "auth/verify.html", ctx)
+
+
+def forgot(request):
+    ctx = {"email": request.GET.get("email", "")}
+    if request.method == "POST":
+        ctx["email"] = request.POST.get("email", "").strip()
+        try:
+            api.call(request, "POST", "/api/auth/forgot", json={"email": ctx["email"]}, auth=False)
+            request.session["reset_email"] = ctx["email"]
+            messages.info(request, _(request, "Bu adrese kayıtlı bir hesap varsa sıfırlama kodu gönderildi."))
+            return redirect("reset")
+        except api.ApiError as e:
+            ctx["error"] = e.message
+    return render(request, "auth/forgot.html", ctx)
+
+
+def reset(request):
+    ctx = {"email": request.session.get("reset_email", "")}
+    if request.method == "POST":
+        ctx["email"] = request.POST.get("email", "").strip()
+        if request.POST.get("password") != request.POST.get("password2"):
+            ctx["error"] = _(request, "Şifreler aynı değil.")
+        else:
+            try:
+                resp = api.call(request, "POST", "/api/auth/reset", auth=False, json={
+                    "email": ctx["email"], "code": request.POST.get("code", "").strip(),
+                    "password": request.POST.get("password", "")})
+                _start_session(request, resp)
+                messages.success(request, _(request, "Şifren değiştirildi. Diğer cihazlardaki oturumların kapatıldı."))
+                return redirect(_home_for(resp["user"]))
+            except api.ApiError as e:
+                ctx["error"] = e.message
+    return render(request, "auth/reset.html", ctx)
 
 
 @require_POST
@@ -150,15 +229,51 @@ def logout_view(request):
 
 # ---- öğrenci ----
 
-@login_required
+def _photo_files(request):
+    """Geçerli fotoğraflar ve atlananların sebepleri."""
+    files, skipped = [], []
+    for f in request.FILES.getlist("photos"):
+        if len(files) >= MAX_PHOTOS:
+            skipped.append(_(request, "En fazla 3 fotoğraf seçebilirsin."))
+            break
+        if f.size > MAX_PHOTO_BYTES:
+            skipped.append(api.translate_api_error(request.LANG, "fotoğraf çok büyük (en fazla 8 MB)"))
+            continue
+        if (f.content_type or "").lower() not in PHOTO_TYPES:
+            skipped.append(api.translate_api_error(request.LANG, "sadece JPEG veya PNG fotoğraf yüklenebilir"))
+            continue
+        files.append(f)
+    return files, skipped
+
+
+def _upload_photos(request, ticket_id, files):
+    """Fotoğrafları yükler; başarısızların sebeplerini döner."""
+    failed = []
+    for f in files:
+        try:
+            api.call(request, "POST", f"/api/tickets/{ticket_id}/photos",
+                     files={"photo": (f.name or "photo.jpg", f.read(), f.content_type)})
+        except api.ApiError as e:
+            failed.append(e.message.rstrip("."))
+    return failed
+
+
+def _report_failures(request, reasons):
+    if reasons:
+        messages.error(request, _(request, "{n} fotoğraf yüklenemedi: {reason}", n=len(reasons), reason=reasons[0]))
+
+
+@verified_required
 def report(request):
     form = {"category": "", "building": "", "room": "", "title": "", "description": "", "priority": "orta"}
     error = None
     if request.method == "POST":
         form = {k: request.POST.get(k, "").strip() for k in form}
+        files, skipped = _photo_files(request)
         try:
             t = api.call(request, "POST", "/api/tickets", json=form)
             messages.success(request, _(request, "Bildirimin teknik ekibe iletildi. Takip numaran: {code}", code=t["code"]))
+            _report_failures(request, skipped + _upload_photos(request, t["id"], files))
             return redirect("ticket", ticket_id=t["id"])
         except api.ApiError as e:
             error = e.message
@@ -186,7 +301,34 @@ def ticket(request, ticket_id):
             return render(request, "portal/not_found.html", status=404)
         messages.error(request, e.message)
         return redirect("mine")
-    return render(request, "portal/ticket.html", {"t": t, "statuses": STATUSES})
+    me = request.session["user"]
+    can_add_photo = (len(t.get("photos") or []) < MAX_PHOTOS and me.get("verified", True)
+                     and (me["role"] in STAFF_ROLES or t.get("reporter_id") == me["id"]))
+    return render(request, "portal/ticket.html", {"t": t, "statuses": STATUSES, "can_add_photo": can_add_photo})
+
+
+@verified_required
+@require_POST
+def ticket_photo(request, ticket_id):
+    files, skipped = _photo_files(request)
+    failed = skipped + _upload_photos(request, ticket_id, files[:1])
+    if failed:
+        _report_failures(request, failed)
+    elif files:
+        messages.success(request, _(request, "Fotoğraf eklendi."))
+    return redirect("ticket", ticket_id=ticket_id)
+
+
+@login_required
+def photo(request, photo_id):
+    try:
+        data, ctype = api.fetch_raw(request, f"/api/photos/{photo_id}")
+    except api.ApiError:
+        raise Http404
+    resp = HttpResponse(data, content_type=ctype)
+    resp["Cache-Control"] = "private, max-age=31536000, immutable"
+    resp["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 @staff_required
@@ -260,16 +402,6 @@ def panel_list(request):
     return render(request, "portal/_panel_body.html", ctx)
 
 
-def _duration(request, hours):
-    if hours <= 0:
-        return None
-    if hours < 1:
-        return _(request, "1 saatten az")
-    if hours < 48:
-        return _(request, "{n} sa", n=f"{hours:.1f}".replace(".", "," if request.LANG == "tr" else "."))
-    return _(request, "{n} gün", n=f"{hours / 24:.1f}".replace(".", "," if request.LANG == "tr" else "."))
-
-
 @staff_required
 def reports(request):
     days = 30 if request.GET.get("days") == "30" else 14
@@ -291,7 +423,7 @@ def reports(request):
     return render(request, "portal/reports.html", {
         "r": r, "days": days, "daily": daily, "peak": peak, "max_cat": max_cat, "max_bld": max_bld,
         "open_count": (totals.get("yeni") or 0) + (totals.get("islemde") or 0),
-        "avg": _duration(request, r.get("avg_resolve_hours") or 0),
+        "avg": duration(r.get("avg_resolve_hours") or 0, request.LANG) or None,
     })
 
 

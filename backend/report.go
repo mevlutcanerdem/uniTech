@@ -52,14 +52,12 @@ func sortedCounts(m map[string]int) []Count {
 	return out
 }
 
-// Report son `days` günün özetini çıkarır.
-func (s *Store) Report(days int, now time.Time) Report {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+// BuildReport son `days` günün özetini çıkarır.
+func BuildReport(tickets []Ticket, users []User, days int, now time.Time) Report {
 	r := Report{}
 	cat, bld := map[string]int{}, map[string]int{}
 	staff := map[int]*StaffStat{}
-	for _, u := range s.d.Users {
+	for _, u := range users {
 		if u.IsStaff() {
 			staff[u.ID] = &StaffStat{ID: u.ID, Name: u.Name}
 		}
@@ -76,7 +74,7 @@ func (s *Store) Report(days int, now time.Time) Report {
 
 	var resolveSum float64
 	var resolved int
-	for _, t := range s.d.Tickets {
+	for _, t := range tickets {
 		r.Total++
 		cat[t.Category]++
 		bld[t.Building]++
@@ -132,4 +130,36 @@ func (s *Store) Report(days int, now time.Time) Report {
 		return r.Staff[i].Name < r.Staff[j].Name
 	})
 	return r
+}
+
+// PublicStats giriş yapmadan görülebilen, kişisel bilgi içermeyen özet (tanıtım sayfası için).
+type PublicStats struct {
+	Total           int     `json:"total"`
+	Open            int     `json:"open"`
+	Resolved        int     `json:"resolved"`
+	Resolved30d     int     `json:"resolved_30d"`
+	AvgResolveHours float64 `json:"avg_resolve_hours"`
+}
+
+func BuildPublicStats(tickets []Ticket, now time.Time) PublicStats {
+	var p PublicStats
+	var sum float64
+	for _, t := range tickets {
+		p.Total++
+		if t.Status != StatusDone {
+			p.Open++
+			continue
+		}
+		p.Resolved++
+		if t.ResolvedAt != nil {
+			sum += t.ResolvedAt.Sub(t.CreatedAt).Hours()
+			if now.Sub(*t.ResolvedAt) <= 30*24*time.Hour {
+				p.Resolved30d++
+			}
+		}
+	}
+	if p.Resolved > 0 {
+		p.AvgResolveHours = sum / float64(p.Resolved)
+	}
+	return p
 }
