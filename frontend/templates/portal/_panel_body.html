@@ -12,3 +12,4 @@
     <li class="empty"><span class="tile t-done">{% icon "check" 26 %}</span><strong>{% t "Bu filtrede bildirim yok" %}</strong><span>{% t "Yeni bir arıza bildirildiğinde burada anında görünür." %}</span></li>
   {% endfor %}
 </ul>
+{% if more_url %}<a class="btn more" href="{{ more_url }}">{% t "Daha fazla göster" %}</a>{% endif %}

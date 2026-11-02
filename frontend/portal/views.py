@@ -49,7 +49,7 @@ def _requires(roles=None, login_view_staff=False, need_verified=False):
                 messages.info(request, e.message)
                 return _login_redirect(request, login_view_staff)
             except api.ApiError as e:
-                return render(request, "portal/_error_page.html", {"message": e.message}, status=503)
+                return _unavailable(request, e)
             user = request.session["user"]
             if roles and user["role"] not in roles:
                 msg = "Bu sayfa sadece yöneticiler içindir." if roles == ("admin",) else "Bu sayfa sadece teknik ekip içindir."
@@ -68,6 +68,12 @@ login_required = _requires()
 verified_required = _requires(need_verified=True)
 staff_required = _requires(STAFF_ROLES, login_view_staff=True)
 admin_required = _requires(("admin",), login_view_staff=True)
+
+
+def _unavailable(request, e):
+    """API uykudaysa (ücretsiz sunucu) kullanıcıyı hata yerine kendiliğinden yenilenen bir bekleme sayfasına al."""
+    waking = e.code == "unavailable" or e.status in (502, 503, 504)
+    return render(request, "portal/_error_page.html", {"message": e.message, "waking": waking}, status=503)
 
 
 def _safe_next(request, default):
@@ -353,6 +359,9 @@ def ticket_update(request, ticket_id):
 
 # ---- teknik ekip ----
 
+PANEL_PAGE = 40
+
+
 def _panel_data(request):
     f = {
         "status": request.GET.get("status", "acik"),
@@ -360,9 +369,21 @@ def _panel_data(request):
         "assignee": request.GET.get("assignee", ""),
         "q": request.GET.get("q", "").strip(),
     }
-    tickets = api.call(request, "GET", "/api/tickets", params=f)
+    try:
+        shown = max(PANEL_PAGE, min(int(request.GET.get("n", PANEL_PAGE)), 1000))
+    except ValueError:
+        shown = PANEL_PAGE
+    # Bir fazlasını iste: varsa "daha fazla göster" bağlantısı çıkar.
+    tickets = api.call(request, "GET", "/api/tickets", params={**f, "limit": shown + 1})
     stats = api.call(request, "GET", "/api/stats")
-    return {"filters": f, "tickets": tickets, "stats": stats, "categories": CATEGORIES, "statuses": STATUSES}
+    more_url = None
+    if len(tickets) > shown:
+        tickets = tickets[:shown]
+        q = request.GET.copy()
+        q["n"] = shown + PANEL_PAGE
+        more_url = reverse("panel") + "?" + q.urlencode()
+    return {"filters": f, "tickets": tickets, "stats": stats, "categories": CATEGORIES, "statuses": STATUSES,
+            "more_url": more_url}
 
 
 def _tab_url(request, assignee):

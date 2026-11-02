@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1f3a">
   <title>{% block title %}uniTech{% endblock %} · {% t "AGÜ Teknik Destek" %}</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M19.6 8.4a1.3 1.3 0 0 0 0 1.9l2.1 2.1a1.3 1.3 0 0 0 1.9 0l3-3a8 8 0 0 1-10.6 10.6l-5.5 5.5a2.8 2.8 0 0 1-4-4l5.5-5.5A8 8 0 0 1 22.6 5.4z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <link rel="manifest" href="{% static 'site.webmanifest' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
@@ -15,7 +17,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="{% url 'index' %}">
-        <span class="logo">{% icon "logo" 20 %}</span>
+        <span class="logo"><img src="{% static 'img/agu-amblem.png' %}" alt="AGÜ" width="26" height="27"></span>
         <span class="brand-text"><b>uniTech{% if is_staff %} <em class="team-tag">{% t "Ekip" %}</em>{% endif %}</b><span>{% t "AGÜ Teknik Destek" %}</span></span>
       </a>
       {% if me %}
@@ -55,7 +57,7 @@
   {% endblock %}
 
   <footer class="site-foot">
-    <div><span>© {% now "Y" %} uniTech · {% t "Abdullah Gül Üniversitesi" %}</span><span>{% t "Acil durumlarda kampüs güvenliğini arayın." %}</span></div>
+    <div><span class="foot-brand"><img src="{% static 'img/agu-amblem.png' %}" alt="" width="18" height="19">© {% now "Y" %} uniTech · {% t "Abdullah Gül Üniversitesi" %}</span><span>{% t "Acil durumlarda kampüs güvenliğini arayın." %}</span></div>
   </footer>
   <script src="{% static 'js/app.js' %}" defer></script>
   {% block scripts %}{% endblock %}

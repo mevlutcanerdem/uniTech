@@ -655,3 +655,21 @@ func TestLegacyImport(t *testing.T) {
 		t.Error("eski tablo yeniden adlandırılmadı")
 	}
 }
+
+func TestListLimit(t *testing.T) {
+	for name, mk := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, mk(t), false)
+			stu := e.register(t, "ogr@agu.edu.tr")
+			for i := 0; i < 5; i++ {
+				e.call(t, "POST", "/api/tickets", stu.Token, map[string]string{
+					"category": "diger", "building": "Ambar", "room": "", "title": "T", "description": "D", "priority": "orta"}, nil)
+			}
+			var list []Ticket
+			e.call(t, "GET", "/api/tickets?limit=3", stu.Token, nil, &list)
+			if len(list) != 3 {
+				t.Fatalf("limit=3 ile %d arıza döndü", len(list))
+			}
+		})
+	}
+}

@@ -96,11 +96,13 @@ type Limits struct {
 
 func DefaultLimits() Limits {
 	return Limits{
-		LoginFail:   NewLimiter(10, 15*time.Minute),
-		LoginIP:     NewLimiter(30, 15*time.Minute),
-		RegisterIP:  NewLimiter(10, time.Hour),
+		LoginFail: NewLimiter(10, 15*time.Minute),
+		// IP sınırları kaba bir kalkan: kampüs Wi-Fi'ında yüzlerce öğrenci aynı genel IP'yi paylaşır.
+		// Asıl koruma e-posta / kullanıcı başına sınırlardadır.
+		LoginIP:     NewLimiter(600, 15*time.Minute),
+		RegisterIP:  NewLimiter(1000, time.Hour), // açılış günü bütün okul aynı saatte kayıt olabilir
 		ForgotEmail: NewLimiter(3, time.Hour),
-		ForgotIP:    NewLimiter(10, time.Hour),
+		ForgotIP:    NewLimiter(100, time.Hour),
 		ResendShort: NewLimiter(1, time.Minute),
 		ResendLong:  NewLimiter(5, time.Hour),
 		Tickets:     NewLimiter(10, time.Hour),

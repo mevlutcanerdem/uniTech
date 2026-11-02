@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% load portal_icons portal_tags %}
+{% load static portal_icons portal_tags %}
 {% block title %}{% t "Teknik Ekip Girişi" %}{% endblock %}
 {% block body %}
 <main class="auth">
   <section class="auth-brand staff">
-    <span class="badge">{% icon "logo" 16 %} {% t "Teknik ekip" %}</span>
+    <div class="brand-lockup">
+      <img src="{% static 'img/agu-logo-beyaz.png' %}" alt="Abdullah Gül Üniversitesi" width="74" height="109">
+      <div><b>uniTech <em class="team-tag">{% t "Ekip" %}</em></b><span>{% t "Abdullah Gül Üniversitesi" %}<br>{% t "Teknik ekip" %}</span></div>
+    </div>
     <h1>{% t "Arızaları tek panelden yönet." %}</h1>
     <p>{% t "Öğrencilerin bildirdiği arızalar anında burada. Üzerine al, durumunu güncelle, raporları izle." %}</p>
     <ul class="features">

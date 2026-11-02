@@ -1,0 +1,12 @@
+{
+  "name": "uniTech · AGÜ Teknik Destek",
+  "short_name": "uniTech",
+  "icons": [
+    { "src": "img/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f6fb",
+  "theme_color": "#0b1f3a"
+}

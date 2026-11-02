@@ -5,7 +5,8 @@
   const live = document.getElementById("live");
   const toast = document.getElementById("toast");
   const toastText = document.getElementById("toast-text");
-  let toastTimer, refreshTimer, busy = false;
+  let toastTimer, refreshTimer, busy = false, pending = false, lastRun = 0, lastId = null;
+  const MIN_GAP = 2000; // arıza yağmurunda listeyi en fazla 2 saniyede bir yenile
 
   function showToast(text) {
     toastText.textContent = text;
@@ -20,10 +21,20 @@
     return a && body.contains(a) && a.tagName === "INPUT" && a.value;
   }
 
+  // Olayları birleştir: art arda gelen olaylar tek bir yenilemeye dönüşür.
+  function schedule(highlightId) {
+    if (highlightId) lastId = highlightId;
+    if (pending) return;
+    pending = true;
+    const wait = Math.max(300, MIN_GAP - (Date.now() - lastRun));
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => { pending = false; refresh(lastId); }, wait);
+  }
+
   async function refresh(highlightId) {
-    if (busy) return;
-    if (typing()) { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => refresh(highlightId), 3000); return; }
-    busy = true;
+    if (busy || document.hidden) { schedule(highlightId); return; }
+    if (typing()) { clearTimeout(refreshTimer); pending = true; refreshTimer = setTimeout(() => { pending = false; refresh(highlightId); }, 3000); return; }
+    busy = true; lastRun = Date.now();
     try {
       const res = await fetch(cfg.listUrl + location.search, { credentials: "same-origin" });
       if (res.redirected) { location.reload(); return; }
@@ -47,6 +58,8 @@
     if (d.type === "created") {
       showToast((d.priority === "acil" ? T.urgent + " · " : "") + T.newIssue + ": " + (d.title || d.code));
     }
-    refresh(d.ticket_id);
+    schedule(d.ticket_id);
   });
+  // Sekme arka plandayken birikenleri, öne gelince tek seferde getir.
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && lastId) schedule(lastId); });
 })();

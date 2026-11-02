@@ -68,6 +68,9 @@ func (a *App) listTickets(w http.ResponseWriter, r *http.Request) {
 	u := userFrom(r)
 	q := r.URL.Query()
 	f := TicketFilter{Status: q.Get("status"), Category: q.Get("category"), Query: q.Get("q")}
+	if n, err := strconv.Atoi(q.Get("limit")); err == nil && n > 0 {
+		f.Limit = min(n, 1000)
+	}
 	switch q.Get("assignee") {
 	case "me":
 		f.AssigneeID = u.ID

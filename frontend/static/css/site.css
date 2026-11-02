@@ -46,6 +46,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
 a { color: var(--primary); text-decoration: none; }
@@ -115,7 +116,7 @@ a:hover { text-decoration: underline; }
 .card h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 .card-sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 form.stack { display: flex; flex-direction: column; gap: 20px; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 label { display: flex; flex-direction: column; gap: 7px; font-weight: 600; font-size: 13.5px; min-width: 0; }
 label small, .hint { font-weight: 500; color: var(--muted); font-size: 12.5px; }
@@ -400,3 +401,17 @@ th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .photo-add .err { flex-basis: 100%; }
 .card .card-head h2 { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .btn.busy::after { animation: none; } .gallery img { transition: none; } }
+.btn.more { align-self: center; }
+
+/* ---------- AGÜ logosu ---------- */
+.logo { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.logo img { width: 26px; height: auto; display: block; }
+.brand-lockup { display: flex; align-items: center; gap: 18px; }
+.brand-lockup img { width: 74px; height: auto; flex-shrink: 0; }
+.brand-lockup b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.brand-lockup span { display: block; font-size: 13.5px; color: rgba(255,255,255,.72); margin-top: 4px; line-height: 1.4; }
+.brand-lockup + h1 { margin-top: 4px; }
+.foot-brand { display: inline-flex; align-items: center; gap: 8px; }
+.foot-brand img { width: 18px; height: auto; }
+@media (max-width: 900px) { .brand-lockup img { width: 52px; } .brand-lockup b { font-size: 22px; } }
+.spinner { width: 24px; height: 24px; border: 3px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; border-radius: 50%; animation: spin .9s linear infinite; }

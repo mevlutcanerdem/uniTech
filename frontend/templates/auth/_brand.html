@@ -1,6 +1,9 @@
-{% load portal_icons portal_tags %}
+{% load static portal_icons portal_tags %}
 <section class="auth-brand">
-  <span class="badge">{% icon "shield" 16 %} {% t "Abdullah Gül Üniversitesi" %}</span>
+  <div class="brand-lockup">
+    <img src="{% static 'img/agu-logo-beyaz.png' %}" alt="Abdullah Gül Üniversitesi" width="74" height="109">
+    <div><b>uniTech</b><span>{% t "Abdullah Gül Üniversitesi" %}<br>{% t "AGÜ Teknik Destek" %}</span></div>
+  </div>
   <h1>{% t "Kampüsteki arızalar, tek tıkla teknik ekipte." %}</h1>
   <p>{% t "Bozuk projeksiyon, kopan Wi‑Fi, damlayan musluk. Gördüğün sorunu bildir, çözülene kadar adım adım takip et." %}</p>
   <div class="cat-strip" aria-hidden="true">
