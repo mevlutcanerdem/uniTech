@@ -14,8 +14,8 @@ import (
 const (
 	maxPhotoBytes  = 8 << 20 // yüklenen dosya en fazla 8 MB
 	maxPhotoPixels = 40_000_000
-	photoMaxSide   = 1600
-	photoQuality   = 82
+	photoMaxSide   = 1280 // Neon ücretsiz 1 GB: ~150-200 KB/fotoğraf
+	photoQuality   = 78
 )
 
 var ErrPhotoFormat = errors.New("sadece JPEG veya PNG fotoğraf yüklenebilir")

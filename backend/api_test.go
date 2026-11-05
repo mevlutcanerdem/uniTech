@@ -450,7 +450,7 @@ func TestProcessPhoto(t *testing.T) {
 	var pb bytes.Buffer
 	_ = png.Encode(&pb, big)
 	_, w, h, err = ProcessPhoto(pb.Bytes())
-	if err != nil || w != 1600 || h != 500 {
+	if err != nil || w != photoMaxSide || h != photoMaxSide*1000/3200 {
 		t.Fatalf("küçültme: %v %dx%d", err, w, h)
 	}
 	if _, _, _, err := ProcessPhoto([]byte("GIF89a....")); err != ErrPhotoFormat {

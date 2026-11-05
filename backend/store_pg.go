@@ -30,7 +30,9 @@ func NewPGStore(ctx context.Context, url string) (*PGStore, error) {
 		return nil, fmt.Errorf("DATABASE_URL okunamadı: %w", err)
 	}
 	cfg.MaxConns = 8
-	cfg.MaxConnIdleTime = 5 * time.Minute
+	// Boşta bağlantıyı hızlı kapat: Neon gibi sunucusuz veritabanları kullanılmayınca uykuya geçebilsin.
+	cfg.MinConns = 0
+	cfg.MaxConnIdleTime = time.Minute
 	db, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
