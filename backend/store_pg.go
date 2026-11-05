@@ -27,7 +27,9 @@ type PGStore struct{ db *pgxpool.Pool }
 func NewPGStore(ctx context.Context, url string) (*PGStore, error) {
 	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
-		return nil, fmt.Errorf("DATABASE_URL okunamadı: %w", err)
+		// Hata metni adresin kendisini (şifre dahil) içerebilir; günlüğe yazmıyoruz.
+		_ = err
+		return nil, errors.New("DATABASE_URL okunamadı: postgresql://kullanici:sifre@sunucu/veritabani biçiminde bir adres olmalı")
 	}
 	cfg.MaxConns = 8
 	// Boşta bağlantıyı hızlı kapat: Neon gibi sunucusuz veritabanları kullanılmayınca uykuya geçebilsin.
