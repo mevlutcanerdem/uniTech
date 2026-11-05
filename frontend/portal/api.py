@@ -70,7 +70,8 @@ def _send(request, method, path, auth, timeout=TIMEOUT, **kw):
     try:
         return _session.request(method, settings.API_URL + path, headers=headers, timeout=timeout, **kw)
     except requests.RequestException:
-        raise ApiError(503, tr(getattr(request, "LANG", "tr"), "Sunucuya ulaşılamıyor. Biraz sonra tekrar dene."), "unavailable")
+        # Ücretsiz sunucu uykudan uyanırken bağlantı zaman aşımına uğrar.
+        raise ApiError(503, tr(getattr(request, "LANG", "tr"), "Sistem uyanıyor. 30-60 saniye bekleyip tekrar dene."), "unavailable")
 
 
 def _raise_for(request, res, auth):
@@ -81,6 +82,9 @@ def _raise_for(request, res, auth):
         data = {}
     err = data.get("error") if isinstance(data, dict) else None
     code = data.get("code", "") if isinstance(data, dict) else ""
+    if not err and res.status_code >= 500:
+        # API'nin kendisi değil, önündeki platform yanıt verdi (ör. Render uyuyan servisi uyandırıyor).
+        raise ApiError(503, tr(lang, "Sistem uyanıyor. 30-60 saniye bekleyip tekrar dene."), "unavailable")
     if res.status_code == 401 and auth:
         request.session.flush()
         raise NeedLogin(401, _sentence(translate_api_error(lang, err)) if err else tr(lang, "Oturumun kapandı, tekrar giriş yap."), code)

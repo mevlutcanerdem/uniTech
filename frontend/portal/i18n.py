@@ -353,6 +353,7 @@ EN.update({
     "Bu arızaya fotoğraf eklenmemiş.": "No photos were added to this issue.",
     "Daha fazla göster": "Show more",
     "Sistem uyanıyor": "Waking up the system",
+    "Sistem uyanıyor. 30-60 saniye bekleyip tekrar dene.": "The system is waking up. Wait 30-60 seconds and try again.",
     "Sunucu bir süre kullanılmadığı için uykuya geçmişti. Sayfa birkaç saniye içinde kendiliğinden yenilenecek.":
         "The server went to sleep after a period of inactivity. This page will refresh by itself in a few seconds.",
     "{n} fotoğraf yüklenemedi: {reason}": "{n} photo(s) couldn't be uploaded: {reason}",

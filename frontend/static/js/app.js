@@ -1,5 +1,12 @@
 // Sitenin genel davranışları. Satır içi betik yok (İçerik Güvenliği Politikası).
 (function () {
+  // API'yi uyandır: ücretsiz sunucuda API, sunucudan gelen isteklerle uyanmaz; tarayıcıdan gelen bir istekle uyanır.
+  // Öğrenci formu doldururken API arka planda hazır hale gelir. Yanıt okunmaz (no-cors).
+  var api = document.body.dataset.api;
+  if (api && window.fetch) {
+    try { fetch(api + "/api/health", { mode: "no-cors", cache: "no-store", keepalive: true }).catch(function () {}); } catch (e) {}
+  }
+
   // Değişince formu gönderen seçim kutuları
   document.querySelectorAll("[data-autosubmit]").forEach(function (el) {
     el.addEventListener("change", function () { el.form && el.form.submit(); });
