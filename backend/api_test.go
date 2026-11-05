@@ -673,3 +673,21 @@ func TestListLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestAdminPromotedOnLogin(t *testing.T) {
+	for name, mk := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, mk(t), false)
+			u := e.register(t, "sonradan@agu.edu.tr")
+			if u.User.Role != RoleStudent {
+				t.Fatalf("başlangıç rolü: %s", u.User.Role)
+			}
+			e.app.adminEmails["sonradan@agu.edu.tr"] = true
+			var lr authResp
+			e.call(t, "POST", "/api/auth/login", "", map[string]string{"email": "sonradan@agu.edu.tr", "password": "gizlisifre"}, &lr)
+			if lr.User.Role != RoleAdmin {
+				t.Fatalf("girişte yönetici olmadı: %s", lr.User.Role)
+			}
+		})
+	}
+}

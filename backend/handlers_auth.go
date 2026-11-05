@@ -125,6 +125,12 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.limits.LoginFail.Reset(email)
+	// ADMIN_EMAILS'e sonradan eklenen bir adres, önceden açılmış hesapla girişte yönetici olur.
+	if a.adminEmails[u.Email] && u.Role != RoleAdmin {
+		if up, err := a.store.SetRole(r.Context(), u.ID, RoleAdmin); err == nil {
+			u = up
+		}
+	}
 	tok, _ := a.tokens.Issue(u)
 	writeJSON(w, 200, authResp{Token: tok, User: u})
 }
