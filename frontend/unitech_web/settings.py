@@ -111,7 +111,7 @@ SECURE_CSP = {
     "style-src": [CSP.SELF, CSP.UNSAFE_INLINE, "https://fonts.googleapis.com"],
     "font-src": [CSP.SELF, "https://fonts.gstatic.com"],
     "img-src": [CSP.SELF, "data:", "blob:"],
-    "connect-src": [CSP.SELF, API_PUBLIC_URL],
+    "connect-src": [CSP.SELF] + ([API_PUBLIC_URL] if API_PUBLIC_URL else []),
     "form-action": [CSP.SELF],
     "frame-ancestors": [CSP.NONE],
     "base-uri": [CSP.SELF],

@@ -93,9 +93,18 @@ func run() error {
 		version:        getenv("APP_VERSION", version),
 	}
 
+	var handler http.Handler = app.Routes()
+	if fp := os.Getenv("FRONTEND_PROXY"); fp != "" {
+		h, err := withFrontend(handler, fp)
+		if err != nil {
+			return fmt.Errorf("FRONTEND_PROXY okunamadı: %w", err)
+		}
+		handler = h
+		slog.Info("tek servis modu: arayüz istekleri iletiliyor", "hedef", fp)
+	}
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           app.Routes(),
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       60 * time.Second, // fotoğraf yüklemeleri için
 		IdleTimeout:       120 * time.Second,

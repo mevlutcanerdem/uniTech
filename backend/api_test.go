@@ -691,3 +691,35 @@ func TestAdminPromotedOnLogin(t *testing.T) {
 		})
 	}
 }
+
+func TestFrontendProxy(t *testing.T) {
+	front := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("django:" + r.URL.Path + ":" + r.Host))
+	}))
+	defer front.Close()
+	e := newEnv(t, func() Store { s, _ := NewMemStore(""); return s }(), false)
+	h, err := withFrontend(e.app.Routes(), front.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	res, _ := http.Get(srv.URL + "/giris/")
+	b, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if !strings.HasPrefix(string(b), "django:/giris/:127.0.0.1") {
+		t.Fatalf("arayüze iletilmedi: %q", b)
+	}
+	res, _ = http.Get(srv.URL + "/api/health")
+	b, _ = io.ReadAll(res.Body)
+	res.Body.Close()
+	if !strings.Contains(string(b), "ok") || strings.Contains(string(b), "django") {
+		t.Fatalf("API cevaplamadı: %q", b)
+	}
+	front.Close()
+	res, _ = http.Get(srv.URL + "/")
+	if res.StatusCode != 503 {
+		t.Fatalf("arayüz kapalıyken 503 beklenirdi: %d", res.StatusCode)
+	}
+}
